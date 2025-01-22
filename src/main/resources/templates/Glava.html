@@ -29,69 +29,19 @@
         <button id="closeButton">&times;</button>
       </div>
       <ul>
-        <!-- Перебираем список глав -->
         <th:block th:each="glava : ${glavi}">
-          <th:block th:if="${#strings.contains(glava.glavaName, 'Глава')}">
-            <th:block th:if="${curGlava == glava.glavaName}">
-              <a th:href="@{/titles/{nazvanie}/{nomerGlavi}(
-                          nazvanie=${nazvanie},
-                          nomerGlavi=${glava.nomerGlavi})}">
-                <li style="background-color:#f0f0f0" th:text="${glava.glavaName}">
-                  <th:block th:if="${readedChapters}">
-                    <th:block th:each="r : ${readedChapters}">
-                      <th:block th:if="${r == glava.nomerGlavi}"> &#10004;</th:block>
-                    </th:block>
-                  </th:block>
-                </li>
-              </a>
-            </th:block>
-            <th:block th:unless="${curGlava == glava.glavaName}">
-              <a th:href="@{/titles/{nazvanie}/{nomerGlavi}(
-                          nazvanie=${nazvanie},
-                          nomerGlavi=${glava.nomerGlavi})}">
-                <li th:text="${glava.glavaName}">
-                  <th:block th:if="${readedChapters}">
-                    <th:block th:each="r : ${readedChapters}">
-                      <th:block th:if="${r == glava.nomerGlavi}"> &#10004;</th:block>
-                    </th:block>
-                  </th:block>
-                </li>
-              </a>
-            </th:block>
-          </th:block>
-          <th:block th:unless="${#strings.contains(glava.glavaName, 'Глава')}">
-            <th:block th:if="${curGlava == glava.glavaName}">
-              <a th:href="@{/titles/{nazvanie}/{nomerGlavi}(
-                          nazvanie=${nazvanie},
-                          nomerGlavi=${glava.nomerGlavi})}">
-                <li style="background-color:#f0f0f0">
-                  <i th:text="${glava.glavaName}"></i>
-                  <th:block th:if="${readedChapters}">
-                    <th:block th:each="r : ${readedChapters}">
-                      <th:block th:if="${r == glava.nomerGlavi}"> &#10004;</th:block>
-                    </th:block>
-                  </th:block>
-                </li>
-              </a>
-            </th:block>
-            <th:block th:unless="${curGlava == glava.glavaName}">
-              <a th:href="@{/titles/{nazvanie}/{nomerGlavi}(
-                          nazvanie=${nazvanie},
-                          nomerGlavi=${glava.nomerGlavi})}">
-                <li>
-                  <i th:text="${glava.glavaName}"></i>
-                  <th:block th:if="${readedChapters}">
-                    <th:block th:each="r : ${readedChapters}">
-                      <th:block th:if="${r == glava.nomerGlavi}"> &#10004;</th:block>
-                    </th:block>
-                  </th:block>
-                </li>
-              </a>
-            </th:block>
-          </th:block>
+          <a th:href="@{/titles/{nazvanie}/{nomerGlavi}(
+                  nazvanie=${nazvanie},
+                  nomerGlavi=${glava.nomerGlavi})}">
+            <li th:classappend="${curGlava == glava.glavaName} ? 'bg-light' : ''"
+                th:attr="style=${readedChapters != null and readedChapters.contains(glava.nomerGlavi)} ? 'background-color:#f0f0f0' : ''">
+              <span th:if="${#strings.contains(glava.glavaName, 'Глава')}" th:text="${glava.glavaName}"></span>
+              <i th:if="${!#strings.contains(glava.glavaName, 'Глава')}" th:text="${glava.glavaName}"></i>
+              <span th:if="${readedChapters != null and readedChapters.contains(glava.nomerGlavi)}">&#10004;</span>
+            </li>
+          </a>
         </th:block>
       </ul>
-
       <br><br><br>
     </div>
   </div>

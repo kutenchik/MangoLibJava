@@ -365,6 +365,18 @@ public class FDATABASEService {
             return null;
         }
     }
+    public List<String> getContentGlaviRanobe(Long titleId, int nomerGlavi) {
+        String sql = "SELECT content_glavi FROM ranobe_glavi WHERE title_id = ? AND nomer_glavi = ?";
+        try {
+            return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
+                String[] content = (String[]) rs.getArray("content_glavi").getArray();
+                return List.of(content);
+            }, titleId, nomerGlavi);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Collections.emptyList();
+        }
+    }
 
     /**
      * getLastGlava(nazvanie) — вернуть max(nomer_glavi)

@@ -1,143 +1,87 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
-  <th:block th:replace="baza :: links"></th:block>
-  <title th:text="${title}">Поиск</title>
+  <title>Поиск</title>
 </head>
 <body>
+<br><br><br><br>
+<center>
+  <form th:action="@{/poisk}" method="post">
+    <input type="hidden" name="search_form" value="name_search">
+    <div class="searchBox">
+      <input class="searchInput" type="text" name="poisk" placeholder="Название">
+      <button class="searchButton">
+        <i class="material-icons">Искать</i>
+      </button>
+    </div>
+  </form>
+</center>
 
-<div th:replace="baza :: menu"></div>
-
-<div class="content1" style="margin-top:60px;">
-  <center>
-    <form th:action="@{/poisk}" method="POST">
-      <input type="hidden" name="search_form" value="name_search">
-      <div class="searchBox">
-        <input class="searchInput" type="text" name="poisk" placeholder="Название">
-        <button class="searchButton">Искать</button>
+<div class="forma-sort">
+  <form th:action="@{/poisk}" method="post">
+    <input type="hidden" name="search_form" value="filter_search">
+    <div class="genre-btns">
+      <button id="openGenresBtn" type="button">Открыть жанры</button>
+      <button id="closeGenresBtn" style="display: none;" type="button">Закрыть жанры</button>
+    </div>
+    <div class="genres-list">
+      <div th:each="genre : ${uniq_genres}" class="checkbox-item">
+        <label th:text="${genre}"></label>
+        <input type="checkbox" name="selected_genres" th:value="${genre}">
       </div>
-    </form>
-  </center>
-
-  <div class="forma-sort">
-    <form th:action="@{/poisk}" method="post">
-      <input type="hidden" name="search_form" value="filter_search">
-
-      <div class="genre-btns">
-        <button id="openGenresBtn" type="button">Открыть жанры</button>
-        <button id="closeGenresBtn" style="display:none;" type="button">Закрыть жанры</button>
+    </div>
+    <label>Тип</label>
+    <div class="type-list">
+      <div class="checkbox-item">
+        <label>Манга</label>
+        <input type="checkbox" name="selected_type" value="манга">
       </div>
-
-      <div class="genres-list" style="display:none;">
-        <div class="checkbox-item"
-             th:each="item : ${uniq_genres}">
-          <label th:text="${item[0]}"></label>
-          <input type="checkbox" name="selected_genres"
-                 th:value="${item[0]}">
-        </div>
+      <div class="checkbox-item">
+        <label>Ранобе</label>
+        <input type="checkbox" name="selected_type" value="ранобе">
       </div>
-
-      <label>Тип</label>
-      <div class="type-list">
-        <div class="checkbox-item">
-          <label>Манга</label>
-          <input type="checkbox" name="selected_type" value="манга">
-        </div>
-        <div class="checkbox-item">
-          <label>Ранобе</label>
-          <input type="checkbox" name="selected_type" value="ранобе">
-        </div>
-        <div class="checkbox-item">
-          <label>Аниме</label>
-          <input type="checkbox" name="selected_type" value="аниме">
-        </div>
+      <div class="checkbox-item">
+        <label>Аниме</label>
+        <input type="checkbox" name="selected_type" value="аниме">
       </div>
+    </div>
+    <div class="chapter-input">
+      <label for="chapterStart">Количество глав:</label>
+      <input type="number" id="chapterStart" placeholder="от" name="chapter_start" min="0">
+      <label for="chapterEnd">-</label>
+      <input type="number" id="chapterEnd" placeholder="до" name="chapter_end" min="0">
+    </div>
+    <div class="year-input">
+      <label for="yearStart">Год:</label>
+      <input type="number" id="yearStart" placeholder="от" name="year_start" min="1900">
+      <label for="yearEnd">-</label>
+      <input type="number" id="yearEnd" placeholder="до" name="year_end" min="1900">
+    </div>
+    <div>
+      <input type="submit" value="Показать">
+      <input type="reset" value="Сбросить">
+    </div>
+  </form>
+</div>
 
-      <div class="chapter-input">
-        <label>Количество глав:</label><br>
-        <input type="number" placeholder="от" name="chapter_start" min="0">
-        <label>-</label>
-        <input type="number" placeholder="до" name="chapter_end" min="0">
-      </div>
-
-      <div class="year-input">
-        <label>Год:</label><br>
-        <input type="number" placeholder="от" name="year_start" min="1900">
-        <label>-</label>
-        <input type="number" placeholder="до" name="year_end" min="1900">
-      </div>
-
-      <div style="clear:both;"></div>
-      <input type="submit" name="submit" value="Показать">
-      <input type="reset" name="clear" value="Сбросить">
-    </form>
-  </div>
-
-  <!-- JS жанров (показать/скрыть) -->
-  <script>
-    const openGenresBtn = document.getElementById('openGenresBtn');
-    const closeGenresBtn = document.getElementById('closeGenresBtn');
-    const genresList = document.querySelector('.genres-list');
-
-    openGenresBtn.addEventListener('click', function() {
-        genresList.style.display = 'block';
-        openGenresBtn.style.display = 'none';
-        closeGenresBtn.style.display = 'block';
-    });
-    closeGenresBtn.addEventListener('click', function() {
-        genresList.style.display = 'none';
-        openGenresBtn.style.display = 'block';
-        closeGenresBtn.style.display = 'none';
-    });
-  </script>
-
-  <!-- Результаты поиска -->
-  <center>
-    <div class="container">
-      <div th:if="${titles}">
-        <div class="seeAll">
-          <div class="topic">Результаты поиска:</div>
-          <div class="sort-buttons">
-            <label for="sort_by">Сортировать по:</label>
-            <select id="sort_by" name="sort_by" onchange="sortTitles(this.value)">
-              <option value="titleAsc">Названию (А-Я)</option>
-              <option value="titleDesc">Названию (Я-А)</option>
-              <option value="chapterAsc">Количеству глав (↑)</option>
-              <option value="chapterDesc">Количеству глав (↓)</option>
-              <option value="viewsAsc">Просмотрам (↑)</option>
-              <option value="viewsDesc">Просмотрам (↓)</option>
-              <option value="ratingAsc">Рейтингу (↑)</option>
-              <option value="ratingDesc">Рейтингу (↓)</option>
-            </select>
-          </div>
-        </div>
-        <hr>
-        <div class="grid-container" th:id="titlesGrid">
-          <div class="grid-item" th:each="t : ${titles}"
-               th:attr="data-chapter=${t[5]}, data-views=${t[4]}">
-            <a class="image-con"
-               th:href="@{/showTitle/{nazvanie}(nazvanie=${t[2]})}">
-              <img th:src="${t[1]}" class="grid-img item" alt="image">
-              <span class="view-count"
-                    th:text="${somehowViews(t[0]) + ' просмотров'}">
-                            </span>
-            </a>
-            <div class="card_content" th:text="${t[0]}"></div>
-            <!-- ... -->
-          </div>
+<div class="container">
+  <div th:if="${titles != null}" class="seeAll">
+    <div class="topic">Результаты поиска:</div>
+    <div class="grid-container">
+      <div th:each="title : ${titles}" class="grid-item">
+        <a th:href="@{/titles/{name}(name=${title.nameOnEnglish})}">
+          <img th:src="${title.cover}" class="grid-img item" alt="image">
+        </a>
+        <div class="card_content" th:text="${title.nameOnRussian}"></div>
+        <div class="infaPriNavodke">
+          <p>Год: <b th:text="${title.year}"></b></p>
+          <p>Жанры: <b th:text="${title.genres}"></b></p>
+          <p>Глав: <b th:text="${title.glavaCount}"></b></p>
+          <p>Рейтинг: <b th:text="${title.rating}"></b></p>
         </div>
       </div>
     </div>
-  </center>
-
-  <script>
-    function sortTitles(criteria){
-        // ваша логика сортировки через JS
-    }
-  </script>
+  </div>
 </div>
-
-<div th:replace="baza :: footer"></div>
-<div th:replace="baza :: scripts"></div>
 </body>
 </html>

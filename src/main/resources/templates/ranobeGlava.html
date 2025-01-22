@@ -3,18 +3,22 @@
       xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="https://www.thymeleaf.org/thymeleaf-extras-springsecurity6">
 <head>
+  <!-- Подключаем базовые стили и скрипты -->
   <th:block th:replace="baza :: links"></th:block>
 </head>
 <body>
 
+<!-- Подключаем меню -->
 <th:block th:replace="baza :: menu"></th:block>
 
-<div class="content1">
+<div class="content">
   <br><br><br>
+  <!-- Название и оглавление -->
   <div class="nameAndChapters">
     <div class="onlyNameAndChapters">
+      <!-- Ссылка «назад к описанию тайтла» -->
       <a th:href="@{/titles/{nazvanie}(nazvanie=${nazvanie})}">
-        <h2 th:text="${titleName}">Ранобэ название</h2>
+        <h2 th:text="${titleName}">Название тайтла</h2>
       </a>
       <button id="toggleButton">&#9776;</button>
     </div>
@@ -24,103 +28,92 @@
         <button id="closeButton">&times;</button>
       </div>
       <ul>
-        <th:block th:each="ch : ${glavi}">
-          <li th:classappend="${ch.glavaName} == ${curGlava} ? 'bg-light' : ''">
-            <a th:href="@{/titles/{nazvanie}/{n}(nazvanie=${nazvanie}, n=${ch.nomerGlavi})}"
-               th:text="${ch.glavaName}">
-            </a>
-            <span th:if="${readedChapters.contains(ch.nomerGlavi)}"> &#10004;</span>
-          </li>
+        <th:block th:each="glava : ${glavi}">
+          <a th:href="@{/titles/{nazvanie}/{nomerGlavi}(
+                  nazvanie=${nazvanie},
+                  nomerGlavi=${glava.nomerGlavi})}">
+            <li th:classappend="${curGlava == glava.glavaName} ? 'bg-light' : ''"
+                th:attr="style=${readedChapters != null and readedChapters.contains(glava.nomerGlavi)} ? 'background-color:#f0f0f0' : ''">
+              <span th:if="${#strings.contains(glava.glavaName, 'Глава')}" th:text="${glava.glavaName}"></span>
+              <i th:if="${!#strings.contains(glava.glavaName, 'Глава')}" th:text="${glava.glavaName}"></i>
+              <span th:if="${readedChapters != null and readedChapters.contains(glava.nomerGlavi)}">&#10004;</span>
+            </li>
+          </a>
         </th:block>
       </ul>
+      <br><br><br>
     </div>
   </div>
 
-  <!-- Текст ранобэ -->
-  <div class="nuTipDlyaRanobe" style="max-width: 900px; margin: 0 auto; background:white; padding-top:20px">
-    <!-- Предположим, contentGlavi – это List<String>. Тогда: -->
-    <th:block th:each="line : ${contentGlavi}">
-      <!-- Если вдруг в тексте встречаются http-ссылки на картинки -->
-      <p th:if="${#strings.contains(line, 'http')}"
-         th:text="| |"
-         th:utext="|<img style='max-width:100%' src='${line}'/>|">
-      </p>
-      <p th:if="${not #strings.contains(line, 'http')}"
-         th:text="${line}">Текст</p>
+  <!-- Контент главы -->
+  <div class="nuTipDlyaRanobe" style="max-width: 900px; margin: 0 auto; background: white; padding-top: 20px;">
+    <th:block th:each="c : ${contentGlavi}">
+      <p th:if="${#strings.contains(c, 'Часть')}" th:utext="'<strong>' + ${c} + '</strong>'"></p>
+      <p th:if="${c.startsWith('http')}" th:utext="'<img style=\'max-width:100%\' src=\'' + ${c} + '\' />'"></p>
+      <p th:if="${!#strings.contains(c, 'Часть') and !c.startsWith('http')}" th:text="${c}"></p>
     </th:block>
   </div>
 
-  <!-- Кнопки «предыдущая/следующая» глава -->
-  <div style="display:flex; justify-content:space-evenly;">
-    <a th:if="${nomer} > 1"
-       th:href="@{/titles/{nazvanie}/{prev}(nazvanie=${nazvanie}, prev=${nomer-1})}">
-      <div class="prevGlava"><b>Предыдущая глава</b></div>
+  <!-- Навигация между главами -->
+  <div style="display: flex; justify-content: space-evenly; margin-top: 20px;">
+    <a th:if="${nomer > 1}"
+       th:href="@{/titles/{nazvanie}/{prev}(nazvanie=${nazvanie}, prev=${nomer - 1})}">
+      <div class="prevGlava">
+        <b>Предыдущая глава</b>
+      </div>
     </a>
-    <a th:if="${nomer} < ${lastGlava}"
-       th:href="@{/titles/{nazvanie}/{next}(nazvanie=${nazvanie}, next=${nomer+1})}">
-      <div class="nextGlava1"><b>Следующая глава</b></div>
+    <a th:if="${nomer < lastGlava}"
+       th:href="@{/titles/{nazvanie}/{next}(nazvanie=${nazvanie}, next=${nomer + 1})}">
+      <div class="nextGlava1">
+        <b>Следующая глава</b>
+      </div>
     </a>
   </div>
 
+  <!-- Комментарии -->
   <section class="content-item" id="comments">
     <div class="container">
       <div class="row">
         <div class="col-sm-8">
-          <!-- Форма для добавления нового комментария -->
-          <form method="post" th:action="@{/titles/{nazvanie}/{nomer}/comment(
-                                             nazvanie=${nazvanie},
-                                             nomer=${nomer})}">
-            <h3 class="pull-left">Новый коммент</h3>
+          <!-- Форма для добавления комментариев -->
+          <form method="post" th:action="@{/titles/{nazvanie}/{nomer}/comment(nazvanie=${nazvanie}, nomer=${nomer})}">
+            <h3 class="pull-left">Новый комментарий</h3>
             <fieldset>
               <div class="row">
                 <div class="col-sm-3 col-lg-2 hidden-xs">
-                  <!-- Аватар текущего пользователя -->
                   <img class="user_pfp"
-                       th:src="${currentUser.profilePic != null} ? @{/${currentUser.profilePic}} : @{/img/defaultAvatar.png}"
-                       alt="avatar">
+                       th:src="${currentUser.profilePic != null ? '/' + currentUser.profilePic : '/uploads/defaultAvatar.png'}" alt="avatar">
                 </div>
                 <div class="form-group col-xs-12 col-sm-9 col-lg-10">
-                    <textarea class="form-control" id="message" name="comment_input"
-                              placeholder="Ваш коммент"
-                              style="resize:none;overflow-y:hidden"
-                              required></textarea>
+                                    <textarea name="comment_input" class="form-control" placeholder="Ваш комментарий"
+                                              style="resize: none;" required></textarea>
                 </div>
               </div>
             </fieldset>
             <button type="submit" class="btn btn-normal pull-right">Отправить</button>
           </form>
 
-          <!-- Список уже существующих комментариев -->
+          <!-- Список комментариев -->
           <div th:if="${comments != null}">
-            <h3 th:text="${comments.size()} + ' коммента'">0 комментов</h3>
-            <th:block th:each="c : ${comments}">
-              <!-- c: [username, profilePic, commentText, commentDate, commentId], например -->
+            <h3 th:text="${#lists.size(comments)} + ' комментариев'">0 комментариев</h3>
+            <th:block th:each="comment : ${comments}">
               <div class="media">
-                <a class="pull-left"
-                   th:href="@{/users/{username}(username=${c[0]})}">
+                <a th:href="@{/users/{username}(username=${comment[0])}" class="pull-left">
                   <img class="media-object"
-                       th:src="${#strings.isEmpty(c[1])}
-                                 ? @{/img/defaultAvatar.png}
-                                 : @{/${c[1]}}"
-                       alt="profilePic"/>
+                       th:src="${comment[1] != null ? '/' + comment[1] : '/uploads/defaultAvatar.png'}" alt="avatar">
                 </a>
                 <div class="media-body">
-                  <h4 class="media-heading" th:text="${c[0]}">username</h4>
-                  <!-- c[2] = commentText -->
-                  <p th:utext="${c[2]}">Текст</p>
+                  <h4 class="media-heading" th:text="${comment[0]}"></h4>
+                  <p th:utext="${comment[2]}"></p>
                   <ul class="list-unstyled list-inline media-detail pull-left">
-                    <li><i class="fa fa-calendar"></i>
-                      <span th:text="${c[3]}">дата</span>
+                    <li>
+                      <i class="fa fa-calendar"></i>
+                      <span th:text="${comment[3]}"></span>
                     </li>
                   </ul>
-
-                  <!-- Показываем кнопку «Удалить» только если
-                       currentUser.username == c[0] или currentUser.status=='Админ' -->
-                  <sec:authorize access="(#authentication.name == c[0]) or hasAuthority('Админ')">
-                    <button style="color: red; border:none; background-color:inherit"
-                            class="deleteBtn pull-right"
-                            th:attr="data-comment-id=${c[4]}">
-                      Удалить
+                  <sec:authorize access="(#authentication.name == comment[0]) or hasAuthority('Админ')">
+                    <button style="color: red; border: none; background-color: inherit;"
+                            th:attr="data-comment-id=${comment[4]}" class="deleteBtn pull-right">Удалить
                     </button>
                   </sec:authorize>
                 </div>
@@ -133,42 +126,32 @@
   </section>
 </div>
 
-<th:block th:replace="baza :: footer"></th:block>
+<!-- Подключение скриптов -->
 <th:block th:replace="baza :: scripts"></th:block>
-
 <script>
-  // Пример того же кода, что у вас был в Jinja2
-  // для смены страницы карусели и т.п.
-
-  // Здесь можно делать fetch POST на /delete_comment
-  document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.deleteBtn').forEach(function(button) {
-      button.addEventListener('click', function() {
-        let commentId = this.getAttribute('data-comment-id');
-        fetch('/delete_comment', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ comment_id: commentId })
-        }).then((resp) => {
-          // например, перезагрузить страницу
-          window.location.reload();
-        });
-      });
-    });
-  });
-
-  // Открытие/закрытие блока оглавления
+  // JavaScript для управления оглавлением и комментариями
   const toggleButton = document.getElementById('toggleButton');
   const closeButton = document.getElementById('closeButton');
   const sidebarGlavi = document.getElementById('sidebarGlavi');
 
-  toggleButton.addEventListener('click', function() {
-    sidebarGlavi.style.right = '0';
-  });
-  closeButton.addEventListener('click', function() {
-    sidebarGlavi.style.right = '-100%';
+  toggleButton.addEventListener('click', function () {
+      sidebarGlavi.style.right = '0';
   });
 
+  closeButton.addEventListener('click', function () {
+      sidebarGlavi.style.right = '-100%';
+  });
+
+  document.querySelectorAll('.deleteBtn').forEach(button => {
+      button.addEventListener('click', function () {
+          const commentId = this.getAttribute('data-comment-id');
+          fetch('/delete_comment', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({comment_id: commentId})
+          }).then(() => location.reload());
+      });
+  });
 </script>
 </body>
 </html>

@@ -197,7 +197,8 @@ public class FMainController {
             return "Glava";
         } else if (type.equals("ранобе")) {
             // Например, разбиваем текст построчно
-            String[] contentLines = contentOrImages.split("\n");
+//            String[] contentLines = contentOrImages.split("\n");
+            List<String> contentLines = dbService.getContentGlaviRanobe(dbService.getTitleIdByName(nazvanie), nomerGlavi);
             model.addAttribute("contentGlavi", contentLines);
             return "ranobeGlava";
         } else if (type.equals("аниме")) {

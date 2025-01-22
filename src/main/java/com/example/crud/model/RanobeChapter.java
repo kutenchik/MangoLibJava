@@ -23,8 +23,8 @@ public class RanobeChapter {
     private Integer nomerGlavi;
     private String glava;
 
-    @Column(columnDefinition = "TEXT")
-    private String contentGlavi;
+    @Column(columnDefinition = "TEXT[]")
+    private String[] contentGlavi;
 
     private LocalDateTime lastUpdate;
 }
