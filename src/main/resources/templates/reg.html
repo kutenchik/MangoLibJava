@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="baza :: links"></th:block>
+    <link rel="stylesheet" th:href="@{/css/reg.css}">
+    <title>Регистрация</title>
+</head>
+<body>
+
+<div th:replace="baza :: menu"></div>
+
+<div class="content1" style="margin-top:60px;">
+    <div class="box">
+        <img src="https://www.clipartmax.com/png/full/267-2671061_y%C3%BCkle-youssefdibeyoussefdibe-profile-picture-user-male.png"
+             alt="Profile" style="max-width:120px;">
+        <div class="page">
+            <div class="header">
+                <a id="login" th:href="@{/login}">Войти</a>
+                <a id="signup" class="active" th:href="@{/registration}">Регистрация</a>
+            </div>
+            <div class="content">
+                <form class="signup" name="signupForm"
+                      th:action="@{/registration}"
+                      method="POST">
+                    <!-- Flash messages -->
+                    <div th:if="${error}">
+                        <p th:text="${error}" style="color:red;"></p>
+                    </div>
+                    <div th:if="${message}">
+                        <p th:text="${message}" style="color:green;"></p>
+                    </div>
+
+                    <input type="text" name="username" placeholder="Имя пользователя">
+                    <input type="email" name="email" placeholder="Email">
+                    <input type="password" name="password" placeholder="Пароль">
+                    <br>
+                    <input type="submit" value="Зарегистрироваться">
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="baza :: footer"></div>
+<div th:replace="baza :: scripts"></div>
+</body>
+</html>

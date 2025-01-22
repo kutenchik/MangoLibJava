@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <th:block th:replace="baza :: links"></th:block>
+  <title th:text="${titleObj.nameOnRussian}">Просмотр тайтла</title>
+</head>
+<body>
+
+<div th:replace="baza :: menu"></div>
+
+<div class="container" style="margin-top:30px;">
+  <div class="main">
+    <div class="seriesOverview">
+      <div style="display:flex; gap:20px;">
+        <!-- Обложка тайтла -->
+        <img th:src="${titleObj.cover}" class="img-r" alt="cover" style="max-height: 400px;">
+
+        <div>
+          <!-- Кнопка "Продолжить чтение/просмотр" -->
+          <div th:if="${lastChapter == null}">
+            <a style="margin-left:15px;width:250px"
+               class="nextGlava"
+               th:href="@{/titles/{nazvanie}/{chapter}(nazvanie=${titleObj.nameOnEnglish}, chapter=${1})}">
+              <div style="width:250px" class="nextGlava">
+
+                <!-- Аналогично проверяем, есть ли главы -->
+                <div th:if="${#lists.size(glavi) > 0}"
+                     th:with="firstCh=${glavi.get(0)}">
+                  <b th:text="${
+           #strings.contains(firstCh.glavaName, 'серия')
+             ? 'Смотреть с 1 серии'
+             : 'Читать с первой главы'
+        }">
+                    <!-- Текст по умолчанию -->
+                  </b>
+                </div>
+
+                <!-- Если glavi пустой -> "Читать с первой главы" -->
+                <div th:if="${#lists.size(glavi) == 0}">
+                  <b>Читать с первой главы</b>
+                </div>
+
+              </div>
+            </a>
+          </div>
+
+
+
+          <br><br>
+          <!-- Кнопка добавления/удаления из избранного -->
+          <form style="margin-left:15px"
+                method="post"
+                th:action="@{/toggle_favorite/{id}(id=${titleObj.titleId})}">
+            <input type="hidden" name="action"
+                   th:value="${isFavorite} ? 'remove' : 'add'">
+            <input style="width:250px;border:none"
+                   class="nextGlava"
+                   type="submit"
+                   th:value="${isFavorite} ? 'Удалить из избранного' : 'Добавить в избранное'">
+          </form>
+        </div>
+      </div> <!-- /flex -->
+
+      <div class="name" style="margin-top:20px;">
+        <h1 th:text="${titleObj.nameOnRussian}"></h1>
+        <article>Год: <span th:text="${titleObj.year}"></span></article>
+        <article>
+          Жанры:
+          <i>
+            <!-- Разбиваем genres по ';' -->
+            <span th:each="g : ${#strings.arraySplit(titleObj.genres, ';')}"
+                  th:text="${g} + ' '"></span>
+          </i>
+        </article>
+
+        <!-- Рейтинг + кнопка "Оценить" -->
+        <div class="containerz" style="margin-top: 10px;">
+          <input id="input-1"
+                 name="input-1"
+                 class="rating rating-loading"
+                 data-min="0" data-max="5" data-step="0.1"
+                 th:value="${titleObj.rating != null ? titleObj.rating : 0}">
+          <button style="width:100px" class="nextGlava"
+                  onclick="submitRating()" type="button">
+            Оценить
+          </button>
+        </div>
+
+        <p th:text="${titleObj.description}"></p>
+        <article>
+          Число просмотров: <span th:text="${prosmotri}"></span>
+        </article>
+      </div>
+    </div> <!-- /.seriesOverview -->
+
+    <br>
+    <!-- Блок "Также рекомендуем" -->
+    <h2>Также рекомендуем</h2>
+    <div class="element-slider">
+      <div class="manga-container">
+        <!-- Предположим, recomend_titles — это List<Title>
+             Если это List<Object[]>, придётся обращаться t[0], t[1]... -->
+        <div class="manga"
+             th:each="t : ${recomend_titles}">
+          <div style="height:360px" class="grid-item">
+            <a class="image-con"
+               th:href="@{/titles/{nazvanie}(nazvanie=${t.nameOnEnglish})}">
+              <img th:src="${t.cover}" class="grid-img item" alt="image">
+              <!-- Аналог amount_of_views?
+                   Если у вас есть t.amountOfViews, просто выводим -->
+              <span class="view-count"
+                    th:text="${t.amountOfViews} + ' просмотров'">
+                            </span>
+            </a>
+            <div class="card_content" th:text="${t.nameOnRussian}"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Кнопки "prev" / "next" для слайдера -->
+      <button class="sled_elem">&#8249;</button>
+      <button class="prosh_elem">&#8250;</button>
+    </div>
+
+    <br><br>
+
+    <!-- Список глав / серий -->
+    <div class="chapter-view">
+      <!-- Проверим: если у glavi последний элемент содержит 'серия',
+           выводим "Серии", иначе "Главы".
+           Однако проверить 'glavi[::-1][0]' в Thymeleaf непросто.
+           Можно просто выводить: "Главы" / "Серии" если type=манга/ранобе/аниме -->
+      <div class="title">
+        <h1 th:text="${
+                        titleObj.type.equals('аниме')
+                           ? 'Серии'
+                           : (titleObj.type.equals('ранобе') ? 'Главы (ранобэ)' : 'Главы (манга)')
+                }"></h1>
+      </div>
+
+      <div class="container-glavi" style="display: inline-block;">
+        <div class="center">
+          <!-- Пример вывода списка глав -->
+          <ul>
+            <li th:each="ch : ${glavi}">
+              <!-- ch.nomerGlavi, ch.glavaName -->
+              <a th:href="@{/titles/{n}/{chap}(n=${titleObj.nameOnEnglish}, chap=${ch.nomerGlavi})}"
+                 th:text="${ch.glavaName}"></a>
+
+              <!-- Если "прочитана" -->
+              <span th:if="${#lists.contains(readedChapters, ch.nomerGlavi)}">&#10004;</span>
+            </li>
+          </ul>
+
+        </div>
+      </div>
+    </div> <!-- /.chapter-view -->
+  </div> <!-- /.main -->
+</div> <!-- /.container -->
+
+
+<!-- JS-код для отправки рейтинга -->
+<script>
+  function submitRating() {
+      const inputValue = document.getElementById('input-1').value;
+
+      fetch('/titles/' + /* вставить ID */ '[titleId]/rate', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 'rating': inputValue }),
+      })
+      .then(response => {
+          console.log('Rating submitted successfully');
+      })
+      .catch(error => {
+          console.error('Error submitting rating:', error);
+      });
+  }
+</script>
+
+<!-- JS-код для "слайдера" -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const elementSlider = document.querySelector('.element-slider');
+    const mangaContainer = document.querySelector('.manga-container');
+    const mangas = document.querySelectorAll('.manga');
+    const sledElem = document.querySelector('.sled_elem');
+    const proshElem = document.querySelector('.prosh_elem');
+
+    if (!mangas || mangas.length == 0) return;
+
+    let mangaWidth = mangas[0].clientWidth;
+    let currentIndex = 0;
+    let slidesToShow = Math.floor(elementSlider.clientWidth / mangaWidth);
+
+    proshElem.addEventListener('click', function() {
+      // Кнопка "следующий"
+      if (currentIndex < mangas.length - slidesToShow) {
+        currentIndex++;
+        mangaContainer.style.transform = `translateX(-${mangaWidth * currentIndex}px)`;
+      }
+    });
+
+    sledElem.addEventListener('click', function() {
+      // Кнопка "предыдущий"
+      if (currentIndex > 0) {
+        currentIndex--;
+        mangaContainer.style.transform = `translateX(-${mangaWidth * currentIndex}px)`;
+      }
+    });
+  });
+</script>
+
+<div th:replace="baza :: footer"></div>
+<div th:replace="baza :: scripts"></div>
+</body>
+</html>

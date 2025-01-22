@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <!-- Общие <head> -->
+  <th:block th:replace="baza :: links"></th:block>
+  <title>Admin Page</title>
+  <!-- Если нужно, подцепите доп. стили -->
+</head>
+<body>
+
+<!-- Шапка из baza -->
+<div th:replace="baza :: menu"></div>
+
+<!-- Основной контент -->
+<div class="content1" style="margin-top:60px;">
+  <h1>Admin Panel</h1>
+
+  <!-- Пример формы "Добавить мангу" (конвертируем Jinja2 -> Thymeleaf) -->
+  <div class="form-style-5">
+    <form th:action="@{/admin}" method="POST">
+      <!-- Пример, если у вас были flashed messages -->
+      <div th:each="fm : ${flashMessages}">
+        <div class="flash" th:text="${fm}"></div>
+      </div>
+
+      <fieldset>
+        <legend><span class="number">1</span> Добавить мангу</legend>
+        <input type="text" name="name_on_rus" placeholder="Название на русском">
+        <input type="text" name="name_on_eng" placeholder="Название на английском">
+        <input type="text" name="href" placeholder="Ссылка">
+      </fieldset>
+      <input type="submit" value="Добавить">
+    </form>
+  </div>
+
+  <!-- Форма "Поменять статус пользователя" -->
+  <div class="form-style-5">
+    <form th:action="@{/changeStatus}" method="POST">
+      <fieldset>
+        <legend><span class="number">2</span> Поменять статус пользователя</legend>
+        <label for="job">Пользователи:</label>
+        <input type="text" id="searchInput" placeholder="Поиск пользователя..."
+               onkeyup="filterUsers()" oninput="updateSelection()">
+
+        <select id="job" name="selectedUser" onchange="updateInput()"
+                th:each="u : ${users}"
+                th:value="${u[1]}" th:text="${u[1]}">
+        </select>
+
+        <label for="job1">Статус:</label>
+        <select id="job1" name="selectedStatus">
+          <optgroup label="Статус">
+            <option value="Админ">Админ</option>
+            <option value="Участник">Участник</option>
+            <option value="Забанен">Забанен</option>
+          </optgroup>
+        </select>
+      </fieldset>
+      <input type="submit" value="Изменить">
+    </form>
+  </div>
+
+  <!-- JS-скрипты для фильтра пользователей -->
+  <script>
+    function filterUsers() {
+        const input = document.getElementById('searchInput');
+        const filter = input.value.toUpperCase();
+        const select = document.getElementById('job');
+        const options = select.getElementsByTagName('option');
+
+        for (let i = 0; i < options.length; i++) {
+            const option = options[i];
+            const txtValue = option.textContent || option.innerText;
+            option.style.display = (txtValue.toUpperCase().indexOf(filter) > -1)
+                ? '' : 'none';
+        }
+    }
+
+    function updateInput() {
+        const select = document.getElementById('job');
+        const input = document.getElementById('searchInput');
+        const selectedOption = select.options[select.selectedIndex].text;
+        input.value = selectedOption;
+    }
+
+    function updateSelection() {
+        const input = document.getElementById('searchInput').value.toUpperCase();
+        const select = document.getElementById('job');
+        const options = select.getElementsByTagName('option');
+        for (let i = 0; i < options.length; i++) {
+            const txtValue = options[i].textContent || options[i].innerText;
+            if (txtValue.toUpperCase().indexOf(input) > -1) {
+                select.selectedIndex = i;
+                break;
+            }
+        }
+    }
+  </script>
+
+</div>
+
+<!-- Футер, скрипты -->
+<div th:replace="baza :: footer"></div>
+<div th:replace="baza :: scripts"></div>
+
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="https://www.thymeleaf.org/thymeleaf-extras-springsecurity6">
+<head>
+  <th:block th:replace="baza :: links"></th:block>
+  <!-- Дополнительные скрипты для плеера, если нужно -->
+  <script src="https://mangavost.org/player/playerjs.js?v=119" type="text/javascript"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+</head>
+<body>
+
+<th:block th:replace="baza :: menu"></th:block>
+
+<div class="content1">
+  <br><br><br>
+  <div class="nameAndChapters">
+    <div class="onlyNameAndChapters">
+      <a th:href="@{/titles/{nazvanie}(nazvanie=${nazvanie})}">
+        <h2 th:text="${titleName}">Аниме название</h2>
+      </a>
+      <button id="toggleButton">&#9776;</button>
+    </div>
+    <div id="sidebarGlavi">
+      <div class="sidebar-header">
+        <span>Список серий</span>
+        <button id="closeButton">&times;</button>
+      </div>
+      <ul>
+        <th:block th:each="oneSeriya : ${glavi}">
+          <li th:classappend="${oneSeriya.glavaName} == ${curGlava} ? 'bg-light' : ''">
+            <a th:href="@{/titles/{nazvanie}/{nomer}(
+                            nazvanie=${nazvanie},
+                            nomer=${oneSeriya.nomerGlavi})}"
+               th:text="${oneSeriya.glavaName}">
+            </a>
+            <span th:if="${readedChapters.contains(oneSeriya.nomerGlavi)}"> &#10004;</span>
+          </li>
+        </th:block>
+      </ul>
+    </div>
+  </div>
+
+  <!-- HTML-код плеера (htmlCode) -->
+  <div th:utext="${htmlCode}"></div>
+
+  <!-- Кнопки «Предыдущая / Следующая серия» -->
+  <div style="display:flex;justify-content:space-evenly">
+    <a th:if="${nomer} > 1"
+       th:href="@{/titles/{nazvanie}/{prev}(nazvanie=${nazvanie}, prev=${nomer-1})}">
+      <div class="prevGlava"><b>Предыдущая серия</b></div>
+    </a>
+    <a th:if="${nomer} < ${lastGlava}"
+       th:href="@{/titles/{nazvanie}/{next}(nazvanie=${nazvanie}, next=${nomer+1})}">
+      <div class="nextGlava1"><b>Следующая серия</b></div>
+    </a>
+  </div>
+
+
+  <!-- Блок комментариев -->
+  <section class="content-item" id="comments">
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-8">
+          <!-- Форма для добавления нового комментария -->
+          <form method="post" th:action="@{/titles/{nazvanie}/{nomer}/comment(
+                                             nazvanie=${nazvanie},
+                                             nomer=${nomer})}">
+            <h3 class="pull-left">Новый коммент</h3>
+            <fieldset>
+              <div class="row">
+                <div class="col-sm-3 col-lg-2 hidden-xs">
+                  <!-- Аватар текущего пользователя -->
+                  <img class="user_pfp"
+                       th:src="${currentUser.profilePic != null} ? @{/${currentUser.profilePic}} : @{/img/defaultAvatar.png}"
+                       alt="avatar">
+                </div>
+                <div class="form-group col-xs-12 col-sm-9 col-lg-10">
+                    <textarea class="form-control" id="message" name="comment_input"
+                              placeholder="Ваш коммент"
+                              style="resize:none;overflow-y:hidden"
+                              required></textarea>
+                </div>
+              </div>
+            </fieldset>
+            <button type="submit" class="btn btn-normal pull-right">Отправить</button>
+          </form>
+
+          <!-- Список уже существующих комментариев -->
+          <div th:if="${comments != null}">
+            <h3 th:text="${comments.size()} + ' коммента'">0 комментов</h3>
+            <th:block th:each="c : ${comments}">
+              <!-- c: [username, profilePic, commentText, commentDate, commentId], например -->
+              <div class="media">
+                <a class="pull-left"
+                   th:href="@{/users/{username}(username=${c[0]})}">
+                  <img class="media-object"
+                       th:src="${#strings.isEmpty(c[1])}
+                                 ? @{/img/defaultAvatar.png}
+                                 : @{/${c[1]}}"
+                       alt="profilePic"/>
+                </a>
+                <div class="media-body">
+                  <h4 class="media-heading" th:text="${c[0]}">username</h4>
+                  <!-- c[2] = commentText -->
+                  <p th:utext="${c[2]}">Текст</p>
+                  <ul class="list-unstyled list-inline media-detail pull-left">
+                    <li><i class="fa fa-calendar"></i>
+                      <span th:text="${c[3]}">дата</span>
+                    </li>
+                  </ul>
+
+                  <!-- Показываем кнопку «Удалить» только если
+                       currentUser.username == c[0] или currentUser.status=='Админ' -->
+                  <sec:authorize access="(#authentication.name == c[0]) or hasAuthority('Админ')">
+                    <button style="color: red; border:none; background-color:inherit"
+                            class="deleteBtn pull-right"
+                            th:attr="data-comment-id=${c[4]}">
+                      Удалить
+                    </button>
+                  </sec:authorize>
+                </div>
+              </div>
+            </th:block>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Подключаем общий подвал -->
+<th:block th:replace="baza :: footer"></th:block>
+
+<!-- Подключаем скрипты -->
+<th:block th:replace="baza :: scripts"></th:block>
+
+<script>
+  // Пример того же кода, что у вас был в Jinja2
+  // для смены страницы карусели и т.п.
+
+  // Здесь можно делать fetch POST на /delete_comment
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.deleteBtn').forEach(function(button) {
+      button.addEventListener('click', function() {
+        let commentId = this.getAttribute('data-comment-id');
+        fetch('/delete_comment', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ comment_id: commentId })
+        }).then((resp) => {
+          // например, перезагрузить страницу
+          window.location.reload();
+        });
+      });
+    });
+  });
+
+  // Открытие/закрытие блока оглавления
+  const toggleButton = document.getElementById('toggleButton');
+  const closeButton = document.getElementById('closeButton');
+  const sidebarGlavi = document.getElementById('sidebarGlavi');
+
+  toggleButton.addEventListener('click', function() {
+    sidebarGlavi.style.right = '0';
+  });
+  closeButton.addEventListener('click', function() {
+    sidebarGlavi.style.right = '-100%';
+  });
+
+</script>
+
+</body>
+</html>

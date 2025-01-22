@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <th:block th:replace="baza :: links"></th:block>
+  <title>Страница не найдена</title>
+</head>
+<body>
+<div th:replace="baza :: menu"></div>
+
+<div class="content1" style="margin-top:60px;">
+  <div class="wrapper">
+    <!-- Ваш SVG с 404 -->
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+      <!-- ... -->
+      <text x="50%" y="50%" text-anchor="middle" fill="red">
+        404
+      </text>
+    </svg>
+  </div>
+</div>
+
+<div th:replace="baza :: footer"></div>
+<div th:replace="baza :: scripts"></div>
+</body>
+</html>

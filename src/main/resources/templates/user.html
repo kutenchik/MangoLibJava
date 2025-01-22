@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="baza :: links"></th:block>
+    <link rel="stylesheet" th:href="@{/css/profile.css}">
+    <title>Профиль пользователя</title>
+</head>
+<body>
+
+<div th:replace="baza :: menu"></div>
+
+<div class="content1" style="margin-top:60px;">
+    <div class="main main-raised">
+        <div class="profile-content">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-6 ml-auto mr-auto">
+                        <div class="profile">
+                            <div class="avatar">
+                                <img class="pic_in_profile"
+                                     th:src="${profile_pic != null}
+                                             ? @{/uploads/__${profile_pic}__}
+                                             : @{https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Circle-icons-profile.svg/1200px-Circle-icons-profile.svg.png}">
+                                <div class="level">
+                                    <div class="level_and_exp">
+                                        <h4>Уровень: <span th:text="${level}"></span></h4>
+                                        <p th:text="${rem_exp + '/' + lvl_porog}"></p>
+                                    </div>
+                                    <div id="progressBar">
+                                        <div id="progress"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="name">
+                                <h3 class="title" th:text="${username}"></h3>
+                                <h3>Статус: <span th:text="${status}"></span></h3>
+                                <h6>ID пользователя: <span th:text="${id}"></span></h6>
+                                <h3 th:utext="${description}">Описание</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h2>Достижения:</h2>
+                <div class="achievements-container" th:if="${user_achievements}">
+                    <div class="achievement" th:each="ach : ${user_achievements}">
+                        <img class="achievement-icon"
+                             th:src="@{/} + ${ach[2]}"
+                             th:alt="${ach[0]}">
+                        <h3 class="achievement-title" th:text="${ach[0]}"></h3>
+                        <p class="achievement-description" th:text="${ach[1]}"></p>
+                    </div>
+                </div>
+
+                <!-- Избранное -->
+                <div th:if="${fav != null}">
+                    <div class="seeAll">
+                        <div class="topic">Избранное</div>
+                    </div>
+                    <hr>
+                    <div class="grid-container" th:each="t : ${fav}">
+                        <div class="grid-item">
+                            <a class="image-con"
+                               th:href="@{/showTitle/{nazvanie}(nazvanie=${t[2]})}">
+                                <img th:src="${t[1]}" class="grid-img item" alt="image">
+                            </a>
+                            <div class="card_content" th:text="${t[0]}"></div>
+                            <!-- ... -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const progressBar = document.getElementById('progress');
+        const text = document.querySelector('.level_and_exp p').textContent;
+        const parts = text.split('/');
+        if (parts.length === 2) {
+            let expValue = parseInt(parts[0]) || 0;
+            let totalValue = parseInt(parts[1]) || 100;
+            const progressWidth = (expValue / totalValue) * 100;
+            progressBar.style.width = progressWidth + '%';
+        }
+    });
+</script>
+
+<div th:replace="baza :: footer"></div>
+<div th:replace="baza :: scripts"></div>
+</body>
+</html>
