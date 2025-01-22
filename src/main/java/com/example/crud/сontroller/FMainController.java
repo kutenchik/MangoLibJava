@@ -179,7 +179,7 @@ public class FMainController {
 
         // Комментарии
         var comments = dbService.getComments(nazvanie, nomerGlavi);
-        model.addAttribute("comments", comments);
+        model.addAttribute("comments", comments != null ? comments : Collections.emptyList());
 
         // lastGlava (для навигации вперед-назад)
         Integer lastGlava = dbService.getLastGlava(nazvanie);
@@ -190,7 +190,6 @@ public class FMainController {
         model.addAttribute("nomer", nomerGlavi);
         model.addAttribute("curGlava", glavaName);
         model.addAttribute("titleName", titleNameRus);
-        System.out.println(comments.get(0)[1]);
         // В зависимости от типа (манга/ранобэ/аниме) — разный шаблон
         if (type.equals("манга")) {
             String[] pages = contentOrImages.split(";");

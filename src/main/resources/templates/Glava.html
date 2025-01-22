@@ -29,22 +29,70 @@
         <button id="closeButton">&times;</button>
       </div>
       <ul>
-        <!-- Перебираем список глав: glavi -->
-        <th:block th:each="oneGlava : ${glavi}">
-          <!-- Например, oneGlava может быть DTO с полями: nomerGlavi, glavaName -->
-          <li th:classappend="${oneGlava.glavaName} == ${curGlava} ? 'bg-light' : ''">
-            <a th:href="@{/titles/{nazvanie}/{nomerGlavi}(
-                            nazvanie=${nazvanie},
-                            nomerGlavi=${oneGlava.nomerGlavi})}"
-               th:text="${oneGlava.glavaName}">
-              Глава 1
-            </a>
-            <!-- галочка, если прочитано -->
-            <!-- Допустим, readedChapters – это List<Integer> номеров глав -->
-            <span th:if="${readedChapters.contains(oneGlava.nomerGlavi)}"> &#10004;</span>
-          </li>
+        <!-- Перебираем список глав -->
+        <th:block th:each="glava : ${glavi}">
+          <th:block th:if="${#strings.contains(glava.glavaName, 'Глава')}">
+            <th:block th:if="${curGlava == glava.glavaName}">
+              <a th:href="@{/titles/{nazvanie}/{nomerGlavi}(
+                          nazvanie=${nazvanie},
+                          nomerGlavi=${glava.nomerGlavi})}">
+                <li style="background-color:#f0f0f0" th:text="${glava.glavaName}">
+                  <th:block th:if="${readedChapters}">
+                    <th:block th:each="r : ${readedChapters}">
+                      <th:block th:if="${r == glava.nomerGlavi}"> &#10004;</th:block>
+                    </th:block>
+                  </th:block>
+                </li>
+              </a>
+            </th:block>
+            <th:block th:unless="${curGlava == glava.glavaName}">
+              <a th:href="@{/titles/{nazvanie}/{nomerGlavi}(
+                          nazvanie=${nazvanie},
+                          nomerGlavi=${glava.nomerGlavi})}">
+                <li th:text="${glava.glavaName}">
+                  <th:block th:if="${readedChapters}">
+                    <th:block th:each="r : ${readedChapters}">
+                      <th:block th:if="${r == glava.nomerGlavi}"> &#10004;</th:block>
+                    </th:block>
+                  </th:block>
+                </li>
+              </a>
+            </th:block>
+          </th:block>
+          <th:block th:unless="${#strings.contains(glava.glavaName, 'Глава')}">
+            <th:block th:if="${curGlava == glava.glavaName}">
+              <a th:href="@{/titles/{nazvanie}/{nomerGlavi}(
+                          nazvanie=${nazvanie},
+                          nomerGlavi=${glava.nomerGlavi})}">
+                <li style="background-color:#f0f0f0">
+                  <i th:text="${glava.glavaName}"></i>
+                  <th:block th:if="${readedChapters}">
+                    <th:block th:each="r : ${readedChapters}">
+                      <th:block th:if="${r == glava.nomerGlavi}"> &#10004;</th:block>
+                    </th:block>
+                  </th:block>
+                </li>
+              </a>
+            </th:block>
+            <th:block th:unless="${curGlava == glava.glavaName}">
+              <a th:href="@{/titles/{nazvanie}/{nomerGlavi}(
+                          nazvanie=${nazvanie},
+                          nomerGlavi=${glava.nomerGlavi})}">
+                <li>
+                  <i th:text="${glava.glavaName}"></i>
+                  <th:block th:if="${readedChapters}">
+                    <th:block th:each="r : ${readedChapters}">
+                      <th:block th:if="${r == glava.nomerGlavi}"> &#10004;</th:block>
+                    </th:block>
+                  </th:block>
+                </li>
+              </a>
+            </th:block>
+          </th:block>
         </th:block>
       </ul>
+
+      <br><br><br>
     </div>
   </div>
 
@@ -106,74 +154,79 @@
   </div>
 
   <!-- Блок комментариев -->
-  <section class="content-item" id="comments">
-    <div class="container">
-      <div class="row">
-        <div class="col-sm-8">
-          <!-- Форма для добавления нового комментария -->
-          <form method="post" th:action="@{/titles/{nazvanie}/{nomer}/comment(
+<!-- Блок комментариев -->
+<!-- Блок комментариев -->
+
+<!-- Блок комментариев -->
+<section class="content-item" id="comments">
+  <div class="container">
+    <div class="row">
+      <div class="col-sm-8">
+        <!-- Форма для добавления нового комментария -->
+        <form method="post" th:action="@{/titles/{nazvanie}/{nomer}/comment(
                                              nazvanie=${nazvanie},
                                              nomer=${nomer})}">
-            <h3 class="pull-left">Новый коммент</h3>
-            <fieldset>
-              <div class="row">
-                <div class="col-sm-3 col-lg-2 hidden-xs">
-                  <!-- Аватар текущего пользователя -->
-                  <img class="user_pfp"
-                       th:src="${currentUser.profilePic != null} ? @{/${currentUser.profilePic}} : @{/uploads/defaultAvatar.png}"
-                       alt="avatar">
-                </div>
-                <div class="form-group col-xs-12 col-sm-9 col-lg-10">
+          <h3 class="pull-left">Новый коммент</h3>
+          <fieldset>
+            <div class="row">
+              <div class="col-sm-3 col-lg-2 hidden-xs">
+                <!-- Аватар текущего пользователя -->
+                <img class="user_pfp"
+                     th:src="${currentUser.profilePic != null} ? @{/${currentUser.profilePic}} : @{/uploads/defaultAvatar.png}"
+                     alt="avatar">
+              </div>
+              <div class="form-group col-xs-12 col-sm-9 col-lg-10">
                     <textarea class="form-control" id="message" name="comment_input"
                               placeholder="Ваш коммент"
                               style="resize:none;overflow-y:hidden"
                               required></textarea>
-                </div>
               </div>
-            </fieldset>
-            <button type="submit" class="btn btn-normal pull-right">Отправить</button>
-          </form>
+            </div>
+          </fieldset>
+          <button type="submit" class="btn btn-normal pull-right">Отправить</button>
+        </form>
 
-          <!-- Список уже существующих комментариев -->
-          <div th:if="${comments != null}">
-            <h3 th:text="${#lists.size(comments)} + ' коммента'">0 комментов</h3>
-            <th:block th:each="c : ${comments}">
-              <!-- c: [username, profilePic, commentText, commentDate, commentId], например -->
-              <div class="media">
-                <a class="pull-left"
-                   th:href="@{/users/{username}(username=${c[0]})}">
-                  <img class="media-object"
-                       th:src="${#strings.isEmpty(c[1]) ? '/uploads/defaultAvatar.png' : '/' + #strings.substringAfter(c[1], 'static\')}"
-                       alt="profilePic"/>
+        <!-- Список уже существующих комментариев -->
+        <div th:if="${comments != null}">
+          <h3 th:text="${#lists.size(comments)} + ' коммента'">0 комментов</h3>
+          <th:block th:each="c : ${comments}">
+            <!-- c: [username, profilePic, commentText, commentDate, commentId], например -->
+            <div class="media">
+              <a class="pull-left"
+                 th:href="@{/users/{username}(username=${c[0]})}">
+                <img class="media-object"
+                     th:src="${#strings.isEmpty(c[1]) ? '/uploads/defaultAvatar.png' : '/' + #strings.substringAfter(c[1], 'static\')}"
+                     alt="profilePic"/>
 
-                </a>
-                <div class="media-body">
-                  <h4 class="media-heading" th:text="${c[0]}">username</h4>
-                  <!-- c[2] = commentText -->
-                  <p th:utext="${c[2]}">Текст</p>
-                  <ul class="list-unstyled list-inline media-detail pull-left">
-                    <li><i class="fa fa-calendar"></i>
-                      <span th:text="${c[3]}">дата</span>
-                    </li>
-                  </ul>
+              </a>
+              <div class="media-body">
+                <h4 class="media-heading" th:text="${c[0]}">username</h4>
+                <!-- c[2] = commentText -->
+                <p th:utext="${c[2]}">Текст</p>
+                <ul class="list-unstyled list-inline media-detail pull-left">
+                  <li><i class="fa fa-calendar"></i>
+                    <span th:text="${c[3]}">дата</span>
+                  </li>
+                </ul>
 
-                  <!-- Показываем кнопку «Удалить» только если
-                       currentUser.username == c[0] или currentUser.status=='Админ' -->
-                  <sec:authorize access="(#authentication.name == c[0]) or hasAuthority('Админ')">
-                    <button style="color: red; border:none; background-color:inherit"
-                            class="deleteBtn pull-right"
-                            th:attr="data-comment-id=${c[4]}">
-                      Удалить
-                    </button>
-                  </sec:authorize>
-                </div>
+                <!-- Показываем кнопку «Удалить» только если
+                     currentUser.username == c[0] или currentUser.status=='Админ' -->
+                <sec:authorize access="(#authentication.name == c[0]) or hasAuthority('Админ')">
+                  <button style="color: red; border:none; background-color:inherit"
+                          class="deleteBtn pull-right"
+                          th:attr="data-comment-id=${c[4]}">
+                    Удалить
+                  </button>
+                </sec:authorize>
               </div>
-            </th:block>
-          </div>
+            </div>
+          </th:block>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
+
 </div><!-- content1 -->
 
 <!-- Подключаем общий подвал -->
