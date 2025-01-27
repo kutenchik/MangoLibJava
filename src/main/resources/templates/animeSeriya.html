@@ -67,45 +67,61 @@
     <div class="container">
       <div class="row">
         <div class="col-sm-8">
-          <!-- Форма для добавления комментариев -->
-          <form method="post" th:action="@{/titles/{nazvanie}/{nomer}/comment(nazvanie=${nazvanie}, nomer=${nomer})}">
-            <h3 class="pull-left">Новый комментарий</h3>
+          <!-- Форма для добавления нового комментария -->
+          <form method="post" th:action="@{/titles/{nazvanie}/{nomer}(
+                                             nazvanie=${nazvanie},
+                                             nomer=${nomer})}">
+            <h3 class="pull-left">Новый коммент</h3>
             <fieldset>
               <div class="row">
                 <div class="col-sm-3 col-lg-2 hidden-xs">
+                  <!-- Аватар текущего пользователя -->
                   <img class="user_pfp"
-                       th:src="${currentUser.profilePic != null ? '/' + currentUser.profilePic : '/uploads/defaultAvatar.png'}" alt="avatar">
+                       th:src="${currentUser.profilePic != null ? currentUser.profilePic : '/uploads/defaultAvatar.png'}"
+                       alt="avatar">
                 </div>
                 <div class="form-group col-xs-12 col-sm-9 col-lg-10">
-                                    <textarea name="comment_input" class="form-control" placeholder="Ваш комментарий"
-                                              style="resize: none;" required></textarea>
+                    <textarea class="form-control" id="message" name="comment_input"
+                              placeholder="Ваш коммент"
+                              style="resize:none;overflow-y:hidden"
+                              required></textarea>
                 </div>
               </div>
             </fieldset>
             <button type="submit" class="btn btn-normal pull-right">Отправить</button>
           </form>
 
-          <!-- Список комментариев -->
+          <!-- Список уже существующих комментариев -->
           <div th:if="${comments != null}">
-            <h3 th:text="${#lists.size(comments)} + ' комментариев'">0 комментариев</h3>
-            <th:block th:each="comment : ${comments}">
+            <h3 th:text="${#lists.size(comments)} + ' коммента'">0 комментов</h3>
+            <th:block th:each="c : ${comments}">
+              <!-- c: [username, profilePic, commentText, commentDate, commentId], например -->
               <div class="media">
-                <a th:href="@{/users/{username}(username=${comment[0])}" class="pull-left">
+                <a class="pull-left"
+                   th:href="@{/users/{username}(username=${c[0]})}">
                   <img class="media-object"
-                       th:src="${comment[1] != null ? '/' + comment[1] : '/uploads/defaultAvatar.png'}" alt="avatar">
+                       th:src="${#strings.isEmpty(c[1]) ? '/uploads/defaultAvatar.png' : (#strings.contains(c[1], 'static') ? #strings.substringAfter(c[1], 'static') : c[1])}"
+                       alt="profilePic"/>
+
+
                 </a>
                 <div class="media-body">
-                  <h4 class="media-heading" th:text="${comment[0]}"></h4>
-                  <p th:utext="${comment[2]}"></p>
+                  <h4 class="media-heading" th:text="${c[0]}">username</h4>
+                  <!-- c[2] = commentText -->
+                  <p th:utext="${c[2]}">Текст</p>
                   <ul class="list-unstyled list-inline media-detail pull-left">
-                    <li>
-                      <i class="fa fa-calendar"></i>
-                      <span th:text="${comment[3]}"></span>
+                    <li><i class="fa fa-calendar"></i>
+                      <span th:text="${c[3]}">дата</span>
                     </li>
                   </ul>
-                  <sec:authorize access="(#authentication.name == comment[0]) or hasAuthority('Админ')">
-                    <button style="color: red; border: none; background-color: inherit;"
-                            th:attr="data-comment-id=${comment[4]}" class="deleteBtn pull-right">Удалить
+
+                  <!-- Показываем кнопку «Удалить» только если
+                       currentUser.username == c[0] или currentUser.status=='Админ' -->
+                  <sec:authorize access="(#authentication.name == c[0]) or hasAuthority('Админ')">
+                    <button style="color: red; border:none; background-color:inherit"
+                            class="deleteBtn pull-right"
+                            th:attr="data-comment-id=${c[4]}">
+                      Удалить
                     </button>
                   </sec:authorize>
                 </div>

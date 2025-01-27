@@ -1085,72 +1085,93 @@ public class FDATABASEService {
      * get_titles_with_genres(selected_genres, chapter_start, chapter_end, year_start, year_end, title_types)
      * Это фильтрованный поиск
      */
-    public List<Object[]> getTitlesWithGenres(List<String> selectedGenres,
-                                              int chapterStart, int chapterEnd,
-                                              int yearStart, int yearEnd,
-                                              List<String> titleTypes) {
-        // Для упрощения: "WHERE glava_count BETWEEN ? AND ? AND year BETWEEN ? AND ? AND type IN(...)"
-        // а потом пост-фильтруем те, у кого все selectedGenres входят в genres
+    public List<Title> getTitlesWithGenres(List<String> selectedGenres,
+                                           int chapterStart, int chapterEnd,
+                                           int yearStart, int yearEnd,
+                                           List<String> titleTypes) {
         try {
-            String inPlaceholders = String.join(",", Collections.nCopies(titleTypes.size(), "?"));
+            // Достаём всю нужную информацию в поля Title
             String sql = """
-                SELECT t.name_on_russian, t.cover, t.name_on_english, t.genres, t.amount_of_views,
-                       (COALESCE((SELECT count(*) FROM glava g WHERE g.title_id=t.title_id),0) +
-                        COALESCE((SELECT count(*) FROM ranobe_glavi rg WHERE rg.title_id=t.title_id),0) +
-                        COALESCE((SELECT count(*) FROM anime_serii aa WHERE aa.title_id=t.title_id),0)) as glava_count,
-                       t.year,
-                       t.description,
-                       (SELECT avg(rating) FROM user_ratings ur WHERE ur.title_id=t.title_id) as average_rating,
-                       t.type
-                FROM titles t
-                -- здесь пока не фильтруем glava_count, year, type
-            """;
+            SELECT t.title_id,
+                   t.name_on_russian,
+                   t.cover,
+                   t.name_on_english,
+                   t.genres,
+                   t.amount_of_views,
+                   (
+                     COALESCE((SELECT count(*) FROM glava g WHERE g.title_id=t.title_id),0) +
+                     COALESCE((SELECT count(*) FROM ranobe_glavi rg WHERE rg.title_id=t.title_id),0) +
+                     COALESCE((SELECT count(*) FROM anime_serii aa WHERE aa.title_id=t.title_id),0)
+                   ) AS glava_count,
+                   t.year,
+                   t.description,
+                   (SELECT avg(rating) FROM user_ratings ur WHERE ur.title_id=t.title_id) AS average_rating,
+                   t.type
+            FROM titles t
+        """;
 
-            // Сперва достанем все тайтлы, потом вручную отфильтруем
-            List<Object[]> allTitles = jdbcTemplate.query(sql, (rs, rowNum)-> new Object[]{
-                    rs.getString("name_on_russian"),
-                    rs.getString("cover"),
-                    rs.getString("name_on_english"),
-                    rs.getString("genres"),
-                    rs.getInt("amount_of_views"),
-                    rs.getInt("glava_count"),
-                    rs.getInt("year"),
-                    rs.getString("description"),
-                    rs.getDouble("average_rating"),
-                    rs.getString("type")
+            // Сначала получаем полный список Title без фильтра по главам/типам/годам:
+            List<Title> allTitles = jdbcTemplate.query(sql, (rs, rowNum)-> {
+                Title tmp = new Title();
+                tmp.setTitleId(rs.getLong("title_id"));
+                tmp.setNameOnRussian(rs.getString("name_on_russian"));
+                tmp.setCover(rs.getString("cover"));
+                tmp.setNameOnEnglish(rs.getString("name_on_english"));
+                tmp.setGenres(rs.getString("genres"));
+                tmp.setAmountOfViews(rs.getInt("amount_of_views"));
+                tmp.setGlavaCount(rs.getInt("glava_count"));
+                tmp.setYear(rs.getInt("year"));
+                tmp.setDescription(rs.getString("description"));
+                double avg = rs.getDouble("average_rating");
+                if (rs.wasNull()) {
+                    tmp.setRating(null);
+                } else {
+                    tmp.setRating(avg);
+                }
+                tmp.setType(rs.getString("type"));
+                return tmp;
             });
 
-            // Фильтрация в памяти (или можно было сразу генерировать сложный WHERE)
-            List<Object[]> result = new ArrayList<>();
-            for(Object[] row : allTitles) {
-                int glavaCount = (Integer) row[5];
-                int year = (Integer) row[6];
-                String type = (String) row[9];
-                if(glavaCount >= chapterStart && glavaCount <= chapterEnd &&
-                        year >= yearStart && year <= yearEnd &&
+            // Фильтрация в памяти (как в вашем примере) по кол-ву глав, году, типу, жанрам:
+            List<Title> result = new ArrayList<>();
+            for (Title t : allTitles) {
+                int glavaCount  = (t.getGlavaCount() == null) ? 0 : t.getGlavaCount();
+                int year        = (t.getYear()       == null) ? 0 : t.getYear();
+                String type     = t.getType() != null ? t.getType() : "";
+
+                // Проверяем главы, год, тип:
+                if (glavaCount >= chapterStart && glavaCount <= chapterEnd &&
+                        year       >= yearStart    && year       <= yearEnd    &&
                         titleTypes.contains(type))
                 {
-                    // проверяем жанры
-                    String genres = (String) row[3];
-                    List<String> splitted = Arrays.asList(genres.split(";"));
+                    // Проверяем жанры:
+                    String genresStr = (t.getGenres() == null) ? "" : t.getGenres();
+                    List<String> splitted = Arrays.asList(genresStr.split(";"));
+
                     boolean allOk = true;
-                    for(String sg : selectedGenres) {
-                        if(!splitted.contains(sg)) {
-                            allOk = false;
-                            break;
+                    if (!selectedGenres.isEmpty()) {
+                        for (String sg : selectedGenres) {
+                            if (!splitted.contains(sg)) {
+                                allOk = false;
+                                break;
+                            }
                         }
                     }
-                    if(allOk) {
-                        result.add(row);
+
+                    if (allOk) {
+                        result.add(t);
                     }
                 }
             }
+
             return result;
+
         } catch(Exception e) {
             e.printStackTrace();
             return Collections.emptyList();
         }
     }
+
 
     /**
      * find_user_recommendations(user_id)

@@ -74,7 +74,6 @@
   <div class="text-center mt-3">
     <label for="pageSelect">Выберите страницу:</label>
     <select id="pageSelect" class="form-control w-25 mx-auto">
-      <option value="0">Страница 1</option>
       <option th:each="page, iterStat : ${pages}" th:value="${iterStat.index}" th:text="'Страница ' + (${iterStat.index + 1})"></option>
     </select>
   </div>
@@ -113,7 +112,7 @@
     <div class="row">
       <div class="col-sm-8">
         <!-- Форма для добавления нового комментария -->
-        <form method="post" th:action="@{/titles/{nazvanie}/{nomer}/comment(
+        <form method="post" th:action="@{/titles/{nazvanie}/{nomer}(
                                              nazvanie=${nazvanie},
                                              nomer=${nomer})}">
           <h3 class="pull-left">Новый коммент</h3>
@@ -122,7 +121,7 @@
               <div class="col-sm-3 col-lg-2 hidden-xs">
                 <!-- Аватар текущего пользователя -->
                 <img class="user_pfp"
-                     th:src="${currentUser.profilePic != null} ? @{/${currentUser.profilePic}} : @{/uploads/defaultAvatar.png}"
+                     th:src="${currentUser.profilePic != null ? currentUser.profilePic : '/uploads/defaultAvatar.png'}"
                      alt="avatar">
               </div>
               <div class="form-group col-xs-12 col-sm-9 col-lg-10">
@@ -145,8 +144,9 @@
               <a class="pull-left"
                  th:href="@{/users/{username}(username=${c[0]})}">
                 <img class="media-object"
-                     th:src="${#strings.isEmpty(c[1]) ? '/uploads/defaultAvatar.png' : '/' + #strings.substringAfter(c[1], 'static\')}"
+                     th:src="${#strings.isEmpty(c[1]) ? '/uploads/defaultAvatar.png' : (#strings.contains(c[1], 'static') ? #strings.substringAfter(c[1], 'static') : c[1])}"
                      alt="profilePic"/>
+
 
               </a>
               <div class="media-body">

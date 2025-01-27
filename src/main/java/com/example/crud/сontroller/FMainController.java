@@ -11,6 +11,7 @@ import com.example.crud.model.User;
 import com.example.crud.repository.TitleRepository;
 import com.example.crud.repository.UserRepository;
 import com.example.crud.service.FDATABASEService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -20,9 +21,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 @Controller
 @RequiredArgsConstructor
@@ -184,7 +185,6 @@ public class FMainController {
         // lastGlava (для навигации вперед-назад)
         Integer lastGlava = dbService.getLastGlava(nazvanie);
         model.addAttribute("lastGlava", lastGlava);
-
         // В модель
         model.addAttribute("nazvanie", nazvanie);
         model.addAttribute("nomer", nomerGlavi);
@@ -223,6 +223,13 @@ public class FMainController {
             // возможно, стоит добавить flash-сообщение
             return "redirect:/titles/" + nazvanie + "/" + nomer_glavi;
         }
+        User currentUser = userRepo.findByUsername(auth.getName()).orElse(null);
+        LocalDate today = LocalDate.now();
+
+        // Форматирование даты
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        String formattedDate = today.format(formatter);
+        dbService.addComment(nazvanie,nomer_glavi,currentUser.getId(),commentInput,formattedDate);
         // dbService.addComment(...)
         // ...
         return "redirect:/titles/" + nazvanie + "/" + nomer_glavi;
@@ -231,61 +238,127 @@ public class FMainController {
     // Профиль
     @GetMapping("/profile")
     public String profilePage(Model model, Authentication auth) {
-        if(auth == null || !auth.isAuthenticated()) {
+        if (auth == null || !auth.isAuthenticated()) {
             return "redirect:/login";
         }
         User currentUser = userRepo.findByUsername(auth.getName()).orElse(null);
-        if(currentUser == null) {
+        if (currentUser == null) {
             return "redirect:/login";
         }
-        model.addAttribute("user", currentUser);
+
+        // 1. Достижения пользователя
+        List<Object[]> userAchievements = dbService.showUsersAchievements(currentUser.getId());
+        model.addAttribute("userAchievements", userAchievements);
+
+        // 2. Уровень и опыт
+        int experience = (currentUser.getExp() != null) ? currentUser.getExp() : 0;
+        int[] lvlInfo = dbService.getLevel(experience);  // [level, rem_exp, lvl_porog]
+        int level = lvlInfo[0];
+        int remExp = lvlInfo[1];
+        int lvlPorog = lvlInfo[2];
+
+        model.addAttribute("level", level);
+        model.addAttribute("remExp", remExp);
+        model.addAttribute("lvlPorog", lvlPorog);
+
+        // 3. Аватар и описание
+        String profilePic = currentUser.getProfilePic();
+        if (profilePic == null || profilePic.equals("None")) {
+            profilePic = null; // для удобства
+        }
+        model.addAttribute("profilePic", profilePic);
+        model.addAttribute("description", (currentUser.getDescription() != null)
+                ? currentUser.getDescription().replace("\n","<br>")
+                : "Пусто");
+        List<Title> allTitles = dbService.getAllTitlesWithStats();
+        // 5. Избранное
+        List<String> favEnglish = dbService.getUserFavorites(currentUser.getId());
+        List<Title> fav = new ArrayList<>();
+        for (String eng : favEnglish) {
+            for (Title t : allTitles) {
+                if (eng.equals(t.getNameOnEnglish())) {
+                    fav.add(t);
+                }
+            }
+        }
+        model.addAttribute("fav", fav);
+
+        // 6. Кол-во просмотров (в Jinja2 вы делали numerize) — можно сформировать список "TitleName;HumanReadableViews"
+        // Если вам нужно именно как в Python, можете сделать dbService.get_numerized(...), но для наглядности:
+        // Пример на Object[] уже не так удобен, т.к. у вас List<Title>.
+        // Можете сделать Helper:
+        //   String "titleName;1K"
+        // и в шаблоне совпоставлять. Ниже кратко:
+
+        List<String> numerizedFav = new ArrayList<>();
+        for (Title t : fav) {
+            numerizedFav.add(t.getNameOnRussian() + ";" + dbService.numerize(t.getAmountOfViews()));
+        }
+        model.addAttribute("amountOfViewsFav", numerizedFav);
+
+        model.addAttribute("userId", currentUser.getId());
+        model.addAttribute("currentUser", currentUser);
+
         return "profile";
     }
 
-    // POST для загрузки аватара / обновления description
+
     @PostMapping("/profile")
-    public String updateProfile(@RequestParam(value="description", required=false) String desc,
-                                @RequestParam(value="img", required=false) MultipartFile img,
+    public String updateProfile(@RequestParam(value = "description", required = false) String desc,
+                                @RequestParam(value = "img", required = false) MultipartFile img,
                                 Authentication auth) throws IOException {
-        if(auth == null || !auth.isAuthenticated()) {
+        if (auth == null || !auth.isAuthenticated()) {
             return "redirect:/login";
         }
+        // Получаем текущего пользователя
         User currentUser = userRepo.findByUsername(auth.getName()).orElse(null);
-        if(currentUser == null) {
+        if (currentUser == null) {
             return "redirect:/login";
         }
-        if(desc != null && !desc.isEmpty()) {
+
+        // Обновляем описание
+        if (desc != null && !desc.isEmpty()) {
             currentUser.setDescription(desc);
         }
-        if(img != null && !img.isEmpty()) {
-            // Аналог secure_filename + сохранение
+
+        // Обработка аватара
+        if (img != null && !img.isEmpty()) {
             String originalName = img.getOriginalFilename();
-            if(originalName != null) {
-                File uploadDir = new File("uploads");
-                if(!uploadDir.exists()) {
+            if (originalName != null) {
+                // Абсолютный путь к папке uploads
+                String uploadDirPath = System.getProperty("user.dir") + "/static/uploads";
+                File uploadDir = new File(uploadDirPath);
+                if (!uploadDir.exists()) {
                     uploadDir.mkdirs();
                 }
+                // Уникальное имя файла
                 File dest = new File(uploadDir, originalName);
-                int counter = 1;
                 String baseName = originalName;
                 String ext = "";
-                if(originalName.contains(".")) {
+                if (originalName.contains(".")) {
                     int dotIndex = originalName.lastIndexOf(".");
                     baseName = originalName.substring(0, dotIndex);
                     ext = originalName.substring(dotIndex);
                 }
-                while(dest.exists()) {
+                int counter = 1;
+                while (dest.exists()) {
                     dest = new File(uploadDir, baseName + "(" + counter + ")" + ext);
                     counter++;
                 }
+                // Сохранение файла
                 img.transferTo(dest);
-                // путь
-                currentUser.setProfilePic(dest.getPath());
+
+                // Сохраняем относительный путь
+                String relativePath = "/uploads/" + dest.getName();
+                currentUser.setProfilePic(relativePath);
             }
         }
+
+        // Сохраняем изменения пользователя
         userRepo.save(currentUser);
         return "redirect:/profile";
     }
+
 
     // Просмотр другого пользователя
     @GetMapping("/users/{username}")
@@ -306,36 +379,110 @@ public class FMainController {
         return "user";
     }
 
-    // Поиск (GET/POST)
     @GetMapping("/poisk")
-    public String poiskPage() {
+    public String showSearchPage(Model model) {
+        // Получаем все тайтлы с нужными вычисляемыми полями
+        List<Title> vse = dbService.getAllTitlesWithStats();
+        // Получаем уникальные жанры
+        List<String> uniqGenres = dbService.getUniqGenres();
+
+        model.addAttribute("uniqGenres", uniqGenres);
+        model.addAttribute("titles", vse);
+
         return "poisk";
     }
 
     @PostMapping("/poisk")
-    public String doSearch(@RequestParam("poisk") String poisk, Model model) {
-        List<Title> found = dbService.searchByName(poisk);
-        model.addAttribute("titles", found);
+    public String handleSearch(
+            @RequestParam(value = "poisk", required = false) String title,
+            @RequestParam(value = "selected_genres", required = false) List<String> genres,
+            @RequestParam(value = "selected_type", required = false) List<String> types,
+            @RequestParam(value = "chapter_start", required = false) Integer chapterStart,
+            @RequestParam(value = "chapter_end", required = false) Integer chapterEnd,
+            @RequestParam(value = "year_start", required = false) Integer yearStart,
+            @RequestParam(value = "year_end", required = false) Integer yearEnd,
+            Model model
+    ) {
+        // 1) Берём все тайтлы со статистикой
+        List<Title> allTitles = dbService.getAllTitlesWithStats();
+
+        // 2) Если пользователь ввёл строку поиска (по названию), фильтруем:
+        //    - Проверяем вхождение в nameOnRussian (учитывая регистр)
+        //    - Или можно расширить проверку: nameOnEnglish, description — что угодно
+        if (title != null && !title.isBlank()) {
+            String lowerSearch = title.toLowerCase();
+            allTitles = allTitles.stream()
+                    .filter(t -> t.getNameOnRussian() != null
+                            && t.getNameOnRussian().toLowerCase().contains(lowerSearch))
+                    .toList();
+        }
+
+        // 3) Далее фильтруем по жанрам, типам, кол-ву глав и году
+        //    Можно использовать уже готовый метод или сделать встроенную логику.
+        //    Допустим, используем тот же "фильтр в памяти":
+        int cStart = (chapterStart != null) ? chapterStart : 0;
+        int cEnd   = (chapterEnd   != null) ? chapterEnd   : Integer.MAX_VALUE;
+        int yStart = (yearStart    != null) ? yearStart    : 1900;
+        int yEnd   = (yearEnd      != null) ? yearEnd      : 2100;
+        List<String> tTypes = (types != null) ? types : List.of("манга", "ранобе", "аниме");
+        List<String> sGenres = (genres != null) ? genres : Collections.emptyList();
+
+        // 4) Фильтруем
+        List<Title> filtered = new ArrayList<>();
+        for (Title t : allTitles) {
+            // Проверяем главы, год, тип
+            int glavaCount = (t.getGlavaCount() == null) ? 0 : t.getGlavaCount();
+            int year       = (t.getYear()       == null) ? 0 : t.getYear();
+            String type    = (t.getType() != null) ? t.getType() : "";
+
+            if (glavaCount >= cStart && glavaCount <= cEnd &&
+                    year       >= yStart && year       <= yEnd  &&
+                    tTypes.contains(type))
+            {
+                // Проверяем жанры
+                String genStr = (t.getGenres() == null) ? "" : t.getGenres();
+                List<String> splitted = Arrays.asList(genStr.split(";"));
+
+                boolean allOk = true;
+                for (String sg : sGenres) {
+                    if (!splitted.contains(sg)) {
+                        allOk = false;
+                        break;
+                    }
+                }
+                if (allOk) {
+                    filtered.add(t);
+                }
+            }
+        }
+
+        // 5) Заполняем модель
+        model.addAttribute("titles", filtered);
+        model.addAttribute("uniqGenres", dbService.getUniqGenres());
+
         return "poisk";
     }
 
+
+
     // Добавить в избранное
     @PostMapping("/add_to_favorite/{titleId}")
-    public String addToFavorite(@PathVariable Long titleId, Authentication auth) {
+    public String addToFavorite(@PathVariable Long titleId, Authentication auth, HttpServletRequest request) {
         if(auth == null || !auth.isAuthenticated()) {
             return "redirect:/login";
         }
         User currentUser = userRepo.findByUsername(auth.getName()).orElse(null);
         if(currentUser == null) return "redirect:/login";
+        String referer = request.getHeader("Referer");
         dbService.addToFavorites(currentUser.getId(), titleId);
-        return "redirect:/titles/" + titleId;
+        return "redirect:"+ referer;
     }
 
     // Тумблер "избранное"
     @PostMapping("/toggle_favorite/{titleId}")
     public String toggleFavorite(@PathVariable Long titleId,
                                  @RequestParam("action") String action,
-                                 Authentication auth) {
+                                 Authentication auth,HttpServletRequest request) {
         if(auth == null || !auth.isAuthenticated()) {
             return "redirect:/login";
         }
@@ -347,8 +494,8 @@ public class FMainController {
         } else if("remove".equals(action)) {
             dbService.removeFromFavorites(currentUser.getId(), titleId);
         }
-        // Возврат на предыдущую страницу
-        return "redirect:/titles/" + titleId;
+        String referer = request.getHeader("Referer");
+        return "redirect:"+ referer;
     }
 
     // Admin

@@ -15,7 +15,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-
+import org.thymeleaf.extras.springsecurity6.dialect.SpringSecurityDialect;
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -23,49 +23,61 @@ public class SecurityConfig {
     @Autowired
     private CustomUserDetailsService userDetailsService;
 
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/", "/registration", "/poisk", "/random_manga", "/test",
+                                "/css/**", "/js/**", "/img/**", "/static/**").permitAll()
+                        .requestMatchers("/admin/**").hasAuthority("Админ")
+                        .anyRequest().authenticated()
+                )
+                .formLogin(login -> login
+                        .loginPage("/login")
+                        .successHandler((request, response, authentication) -> {
+                            // Получаем сохраненный запрос или перенаправляем на /profile
+                            var savedRequest = (org.springframework.security.web.savedrequest.SavedRequest) request.getSession()
+                                    .getAttribute("SPRING_SECURITY_SAVED_REQUEST");
+                            if (savedRequest != null) {
+                                response.sendRedirect(savedRequest.getRedirectUrl());
+                            } else {
+                                response.sendRedirect("/profile");
+                            }
+                        })
+                        .permitAll()
+                )
+                .logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .logoutSuccessUrl("/")
+                        .permitAll()
+                )
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                );
 
-//    @Bean
-//    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-//        http
-//                .csrf(csrf -> csrf.disable())
-//                .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers("/", "/registration", "/poisk", "/random_manga", "/test",
-//                                "/css/**", "/js/**", "/img/**", "/static/**").permitAll()
-//                        // /admin/** только для админов
-//                        .requestMatchers("/admin/**").hasAuthority("Админ")
-//                        .anyRequest().authenticated()
-//                )
-//                .formLogin(login -> login
-//                        .loginPage("/login")
-//                        .defaultSuccessUrl("/profile", true)
-//                        .permitAll()
-//                )
-//                .logout(logout -> logout
-//                        .logoutUrl("/logout")
-//                        .logoutSuccessUrl("/")
-//                        .permitAll()
-//                )
-//                .sessionManagement(session -> session
-//                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-//                );
-//        return http.build();
-//    }
-@Bean
-public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    http
-            .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth
-                    // Разрешаем доступ к любым URL без авторизации
-                    .anyRequest().permitAll()
-            )
-            // Можно оставить базовую конфигурацию формы логина (не будет требоваться)
-            .formLogin(Customizer.withDefaults())
-            // Или отключить, если форма логина не нужна
-            .logout(Customizer.withDefaults());
+        return http.build();
+    }
 
-    return http.build();
-}
-
+// @Bean
+//public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+//    http
+//            .csrf(csrf -> csrf.disable())
+//            .authorizeHttpRequests(auth -> auth
+//                    // Разрешаем доступ к любым URL без авторизации
+//                    .anyRequest().permitAll()
+//            )
+//            // Можно оставить базовую конфигурацию формы логина (не будет требоваться)
+//            .formLogin(Customizer.withDefaults())
+//            // Или отключить, если форма логина не нужна
+//            .logout(Customizer.withDefaults());
+//
+//    return http.build();
+//}
+    @Bean
+    public SpringSecurityDialect springSecurityDialect() {
+        return new SpringSecurityDialect();
+    }
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

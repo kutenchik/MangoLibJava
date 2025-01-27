@@ -1,49 +1,51 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
   <th:block th:replace="baza :: links"></th:block>
-  <title th:text="${title}">Login</title>
-  <link rel="stylesheet" th:href="@{/css/reg.css}">
+  <link th:href="@{/css/reg.css}" rel="stylesheet"/>
+  <title>Войти</title>
 </head>
 <body>
 
+<!-- Меню/шапка -->
 <div th:replace="baza :: menu"></div>
 
-<div class="content1" style="margin:40px;">
-  <div class="box">
-    <img src="https://www.clipartmax.com/png/full/267-2671061_y%C3%BCkle-youssefdibeyoussefdibe-profile-picture-user-male.png"
-         alt="Profile" style="max-width:120px;">
+<br><br><br><br>
 
-    <div class="page">
-      <div class="header">
-        <a id="login" class="active" th:href="@{/login}">Войти</a>
-        <a id="signup" th:href="@{/registration}">Регистрация</a>
-      </div>
-      <div class="content">
-        <form class="login" name="loginForm" th:action="@{/login}" method="POST">
-          <!-- Пример сообщений -->
-          <div th:if="${error}">
-            <p th:text="${error}" style="color:red;"></p>
-          </div>
-          <div th:if="${message}">
-            <p th:text="${message}" style="color:green;"></p>
-          </div>
+<div class="box">
+  <img src="https://www.clipartmax.com/png/full/267-2671061_y%C3%BCkle-youssefdibeyoussefdibe-profile-picture-user-male.png" alt="User Icon">
+  <div class="page">
+    <div class="header">
+      <a id="login" class="active" th:href="@{/login}">Войти</a>
+      <a id="signup" th:href="@{/registration}">Регистрация</a>
+    </div>
 
-          <input type="text" name="emialOrUsername" placeholder="Имя пользователя/почта">
-          <input type="password" name="password" placeholder="Пароль">
+    <div class="content">
+      <!-- ВАЖНО: method="post" и action="/login" — тот же, что в SecurityConfig -->
+      <form class="login" method="post" th:action="@{/login}">
+        <!-- Если используете flash-сообщения -->
+        <div th:if="${not #lists.isEmpty(flashMessages)}"
+             th:each="msg : ${flashMessages}">
+          <div class="flash" th:text="${msg}"></div>
+        </div>
 
-          <div id="check">
-            <input type="checkbox" name="remainme" id="remember">
-            <label for="remember">Запомнить меня</label>
-          </div>
-          <br><br>
-          <input type="submit" value="Войти">
-        </form>
-      </div>
+        <!-- name="username" и name="password" — обязательно именно так, если не меняли параметры в SecurityConfig -->
+        <input type="text" name="username" placeholder="Имя пользователя/почта">
+        <input type="password" name="password" placeholder="Пароль">
+
+        <div id="check">
+          <input type="checkbox" name="remember-me" id="remember">
+          <label for="remember">Запомнить меня</label>
+        </div>
+        <br><br>
+
+        <input type="submit" value="Войти">
+      </form>
     </div>
   </div>
 </div>
 
+<br><br><br><br><br>
 <div th:replace="baza :: footer"></div>
 <div th:replace="baza :: scripts"></div>
 </body>

@@ -60,7 +60,7 @@
              th:href="@{/titles/{nazvanie}(nazvanie=${t.nameOnEnglish})}">
             <img th:src="${t.cover}" class="grid-img item" alt="image">
             <span class="view-count"
-                  th:text="${t.amountOfViews} + ' просмотров'">
+                  th:text="${@FDATABASEService.numerize(t.amountOfViews)} + ' просмотров'">
           </span>
           </a>
           <div class="card_content" th:text="${t.nameOnRussian}"></div>
@@ -106,7 +106,7 @@
              th:href="@{/titles/{nazvanie}(nazvanie=${t.nameOnEnglish})}">
             <img th:src="${t.cover}" class="grid-img item" alt="image">
             <span class="view-count"
-                  th:text="${t.amountOfViews} + ' просмотров'">
+                  th:text="${@FDATABASEService.numerize(t.amountOfViews)} + ' просмотров'">
           </span>
           </a>
           <div class="card_content" th:text="${t.nameOnRussian}"></div>
@@ -152,7 +152,7 @@
              th:href="@{/titles/{nazvanie}(nazvanie=${t.nameOnEnglish})}">
             <img th:src="${t.cover}" class="grid-img item" alt="image">
             <span class="view-count"
-                  th:text="${t.amountOfViews} + ' просмотров'">
+                  th:text="${@FDATABASEService.numerize(t.amountOfViews)} + ' просмотров'">
           </span>
           </a>
           <div class="card_content" th:text="${t.nameOnRussian}"></div>
@@ -199,7 +199,7 @@
            th:href="@{/titles/{nazvanie}(nazvanie=${t.nameOnEnglish})}">
           <img th:src="${t.cover}" class="grid-img item" alt="image">
           <span class="view-count"
-                th:text="${t.amountOfViews} + ' просмотров'">
+                th:text="${@FDATABASEService.numerize(t.amountOfViews)} + ' просмотров'">
         </span>
         </a>
         <div class="card_content" th:text="${t.nameOnRussian}"></div>
@@ -245,7 +245,7 @@
            th:href="@{/titles/{nazvanie}(nazvanie=${t.nameOnEnglish})}">
           <img th:src="${t.cover}" class="grid-img item" alt="image">
           <span class="view-count"
-                th:text="${t.amountOfViews} + ' просмотров'">
+                th:text="${@FDATABASEService.numerize(t.amountOfViews)} + ' просмотров'">
         </span>
         </a>
         <div class="card_content" th:text="${t.nameOnRussian}"></div>
@@ -291,7 +291,7 @@
            th:href="@{/titles/{nazvanie}(nazvanie=${t.nameOnEnglish})}">
           <img th:src="${t.cover}" class="grid-img item" alt="image">
           <span class="view-count"
-                th:text="${t.amountOfViews} + ' просмотров'">
+                th:text="${@FDATABASEService.numerize(t.amountOfViews)} + ' просмотров'">
         </span>
         </a>
         <div class="card_content" th:text="${t.nameOnRussian}"></div>

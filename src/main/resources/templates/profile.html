@@ -1,30 +1,42 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
+  <!-- Подключаем общий head (baza.html), если у вас так устроено -->
   <th:block th:replace="baza :: links"></th:block>
-  <title>Profile</title>
-  <link rel="stylesheet" th:href="@{/css/profile.css}">
+
+  <!-- CSS профиля -->
+  <link th:href="@{/css/profile.css}" rel="stylesheet"/>
+
+  <title>Профиль</title>
 </head>
 <body>
 
+<!-- Меню -->
 <div th:replace="baza :: menu"></div>
 
-<div class="content1" style="margin-top:60px;">
+<center>
   <div class="main main-raised">
     <div class="profile-content">
       <div class="container">
+
+        <!-- Блок шапки профиля -->
         <div class="row">
           <div class="col-md-6 ml-auto mr-auto">
             <div class="profile">
               <div class="avatar">
+                <!-- Если profilePic есть, показываем её, иначе дефолт-аватар -->
                 <img class="pic_in_profile"
-                     th:src="${profile_pic != null}
-                                             ? @{/uploads/__${profile_pic}__}
-                                             : @{https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Circle-icons-profile.svg/1200px-Circle-icons-profile.svg.png}">
+                     th:src="${profilePic != null
+                                              ? profilePic
+                                              : 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Circle-icons-profile.svg/1200px-Circle-icons-profile.svg.png'}"
+                     alt="Avatar"/>
+
                 <div class="level">
                   <div class="level_and_exp">
-                    <h4>Уровень: <span th:text="${level}"></span></h4>
-                    <p th:text="${rem_exp + '/' + lvl_porog}"></p>
+                    <h4>Уровень: <span th:text="${level}">1</span></h4>
+                    <p>
+                      <span th:text="${remExp}">0</span>/<span th:text="${lvlPorog}">10</span>
+                    </p>
                   </div>
                   <div id="progressBar">
                     <div id="progress"></div>
@@ -33,99 +45,137 @@
                 <br>
               </div>
 
-              <form th:action="@{/profile}" method="POST" enctype="multipart/form-data">
-                <input id="input-file" name="img" type="file" style="display:none;">
+              <!-- Форма загрузки аватара/описания -->
+              <form th:action="@{/profile}" method="post" enctype="multipart/form-data">
+                <input id="input-file" name="img" type="file" style="display: none;">
                 <label id="input-file-label" for="input-file">Выбрать фотографию</label>
 
+                <!-- Редактирование описания (клик на h3 -> textarea) -->
                 <h3 id="description"
                     onclick="editDescription()"
-                    th:text="${description != null ? description : 'Добавить описание'}">
+                    th:utext="${description != null ? description : 'Пусто'}">
                 </h3>
+
                 <textarea id="descriptionTextarea"
                           name="description"
                           oninput="autoResize()"
-                          style="display:none;resize:none"></textarea>
+                          style="display: none; resize: none;">
+                </textarea>
 
-                <input type="submit" value="Сохранить">
+                <input type="submit" value="Сохранить"/>
               </form>
 
               <div class="name">
-                <h3 class="title" th:text="${current_user.username}"></h3>
-                <h3>Статус: <span th:text="${current_user.status}"></span></h3>
-                <h6>ID пользователя: <span th:text="${user_id}"></span></h6>
-                <h6><a th:href="@{/logout}">Выйти</a></h6>
+                <!-- Имя пользователя (из Spring Security) или currentUser.username -->
+                <h3 class="title" th:text="${#authentication.name}">Имя</h3>
+
+                <h3>Статус:
+                  <span th:text="${currentUser.status}">Статус</span>
+                </h3>
+
+                <h6>ID пользователя: <span th:text="${userId}">123</span></h6>
+                <h6>
+                  <a th:href="@{/logout}">Выйти</a>
+                </h6>
+              </div>
+
+            </div>
+          </div>
+        </div>
+        <!-- /row -->
+
+        <!-- Достижения -->
+        <h2>Достижения:</h2>
+        <div th:if="${userAchievements != null and !#lists.isEmpty(userAchievements)}">
+          <div class="achievements-container">
+            <div class="achievement" th:each="ach : ${userAchievements}">
+              <img class="achievement-icon"
+                   th:src="${ach[2]}"
+                   th:alt="${ach[0]}"/>
+              <h3 class="achievement-title" th:text="${ach[0]}"></h3>
+              <p class="achievement-description" th:text="${ach[1]}"></p>
+            </div>
+          </div>
+        </div>
+        <div th:unless="${userAchievements != null and !#lists.isEmpty(userAchievements)}">
+          <h2>Пусто</h2>
+        </div>
+
+        <!-- Блок ИЗБРАННОЕ -->
+        <h2>Избранное:</h2>
+        <div th:if="${fav != null and !#lists.isEmpty(fav)}">
+          <div class="grid-container">
+            <!-- Перебираем fav (List<Title>) -->
+            <div class="grid-item" th:each="favTitle, iterStat : ${fav}">
+              <a class="image-con" th:href="@{/titles/{eng}(eng=${favTitle.nameOnEnglish})}">
+                <img th:src="${favTitle.cover}" class="grid-img item" alt="Cover">
+                <!-- Если хотите вывести человеко-читаемые просмотры,
+                     можно взять `amountOfViewsFav[iterStat.index]`,
+                     но нужно сопоставление названий. Или просто numerize() сразу: -->
+                <span class="view-count"
+                      th:text="${@FDATABASEService.numerize(favTitle.amountOfViews)} + ' просмотров'"></span>
+              </a>
+              <div class="card_content" th:text="${favTitle.nameOnRussian}"></div>
+              <!-- Доп. инфа при наведении -->
+              <div class="infaPriNavodke">
+                <h2 th:text="${favTitle.nameOnRussian}"></h2>
+                <p>Год: <b th:text="${favTitle.year}"></b></p>
+                <p>Жанры:
+                  <b th:each="g : ${#strings.arraySplit(favTitle.genres, ';')}"
+                     th:text="${g} + ' '">
+                  </b>
+                </p>
+                <p>Глав:
+                  <b th:text="${favTitle.glavaCount != null ? favTitle.glavaCount : 0}"></b>
+                </p>
+                <div class="containerz">
+                  <!-- Рейтинг -->
+                  <input id="input-1"
+                         name="input-1"
+                         class="rating rating-loading"
+                         data-min="0" data-max="5" data-step="0.1"
+                         th:value="${favTitle.rating != null ? favTitle.rating : 0}">
+                </div>
+                <p id="description"
+                   th:text="${(#strings.length(favTitle.description) > 300)
+                           ? #strings.substring(favTitle.description, 0, 300) + '...'
+                           : favTitle.description}">
+                </p>
               </div>
             </div>
           </div>
         </div>
-
-        <h2>Достижения:</h2>
-        <div class="achievements-container" th:if="${user_achievements}">
-          <div class="achievement"
-               th:each="ach : ${user_achievements}">
-            <img class="achievement-icon"
-                 th:src="@{/} + ${ach[2]}"
-                 th:alt="${ach[0]}">
-            <h3 class="achievement-title" th:text="${ach[0]}"></h3>
-            <p class="achievement-description" th:text="${ach[1]}"></p>
-          </div>
+        <div th:unless="${fav != null and !#lists.isEmpty(fav)}">
+          <p>У вас нет избранных произведений</p>
         </div>
 
-        <!-- Недавно просмотренные -->
-        <div th:if="${last_seen != null}">
-          <div class="seeAll">
-            <div class="topic">Недавно просмотренные</div>
-          </div>
-          <hr>
-          <div class="grid-container" th:each="t : ${last_seen}">
-            <div class="grid-item">
-              <a class="image-con"
-                 th:href="@{/showTitle/{nazvanie}(nazvanie=${t[2]})}">
-                <img th:src="${t[1]}" class="grid-img item" alt="image">
-              </a>
-              <div class="card_content" th:text="${t[0]}"></div>
-              <!-- ... -->
-            </div>
-          </div>
-        </div>
+      </div> <!-- .container -->
+    </div> <!-- .profile-content -->
+  </div> <!-- .main main-raised -->
+</center>
 
-        <!-- Избранное -->
-        <div th:if="${fav != null}">
-          <div class="seeAll">
-            <div class="topic">Избранное</div>
-          </div>
-          <hr>
-          <div class="grid-container" th:each="t : ${fav}">
-            <div class="grid-item">
-              <a class="image-con"
-                 th:href="@{/showTitle/{nazvanie}(nazvanie=${t[2]})}">
-                <img th:src="${t[1]}" class="grid-img item" alt="image">
-              </a>
-              <div class="card_content" th:text="${t[0]}"></div>
-              <!-- ... -->
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </div>
-</div>
+<!-- Подвал, скрипты -->
+<div th:replace="baza :: footer"></div>
+<div th:replace="baza :: scripts"></div>
 
 <script>
   function editDescription() {
-      const descriptionElement = document.getElementById('description');
-      const descriptionTextarea = document.getElementById('descriptionTextarea');
-      const currentDescription = descriptionElement.textContent.trim();
+      let descriptionElement = document.getElementById('description');
+      let descriptionTextarea = document.getElementById('descriptionTextarea');
+      let currentDescription = descriptionElement.textContent.trim();
+      let formattedDescription = currentDescription.replace(/\n/g, '<br>');
+
       descriptionElement.style.display = 'none';
       descriptionTextarea.style.display = 'block';
-      descriptionTextarea.value = currentDescription;
+      descriptionTextarea.value = formattedDescription;
       descriptionTextarea.focus();
 
       descriptionTextarea.onblur = function() {
-          const newDescription = descriptionTextarea.value.trim();
-          descriptionElement.textContent = (newDescription === '')
-              ? 'Добавить описание' : newDescription;
+          let newDescription = descriptionTextarea.value.trim();
+          let formattedNewDescription = newDescription.replace(/<br>/g, '\n');
+          descriptionElement.textContent = (formattedNewDescription === '')
+              ? 'Добавить описание'
+              : formattedNewDescription;
           descriptionElement.style.display = 'block';
           descriptionTextarea.style.display = 'none';
       };
@@ -138,21 +188,21 @@
       textarea.style.height = textarea.scrollHeight + "px";
   }
 
-  document.addEventListener("DOMContentLoaded", function() {
+  document.addEventListener("DOMContentLoaded", function () {
+      // Прогресс-бар
       const progressBar = document.getElementById('progress');
-      // Парсим "50/100" -> expValue=50, totalValue=100
       const text = document.querySelector('.level_and_exp p').textContent;
       const parts = text.split('/');
-      if (parts.length === 2) {
-          let expValue = parseInt(parts[0]) || 0;
-          let totalValue = parseInt(parts[1]) || 100;
-          const progressWidth = (expValue / totalValue) * 100;
-          progressBar.style.width = progressWidth + '%';
+      if(parts.length === 2) {
+          const expValue = parseFloat(parts[0]);
+          const totalValue = parseFloat(parts[1]);
+          if(!isNaN(expValue) && !isNaN(totalValue) && totalValue > 0) {
+              const progressWidth = (expValue / totalValue) * 100;
+              progressBar.style.width = progressWidth + '%';
+          }
       }
   });
 </script>
 
-<div th:replace="baza :: footer"></div>
-<div th:replace="baza :: scripts"></div>
 </body>
 </html>

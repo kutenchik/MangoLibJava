@@ -1,87 +1,498 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
+  <!-- Подключаем общий head из baza.html (если у вас так устроено) -->
+  <th:block th:replace="baza :: links"></th:block>
   <title>Поиск</title>
 </head>
 <body>
+
+<!-- Шапка/меню -->
+<div th:replace="baza :: menu"></div>
+
 <br><br><br><br>
 <center>
-  <form th:action="@{/poisk}" method="post">
+  <!-- Форма поиска по названию -->
+  <form action="/poisk" method="POST">
     <input type="hidden" name="search_form" value="name_search">
     <div class="searchBox">
       <input class="searchInput" type="text" name="poisk" placeholder="Название">
-      <button class="searchButton">
+      <button class="searchButton" href="#">
         <i class="material-icons">Искать</i>
       </button>
     </div>
   </form>
 </center>
 
+<!-- Основная форма для фильтров (блок для десктопа) -->
 <div class="forma-sort">
-  <form th:action="@{/poisk}" method="post">
+  <form action="/poisk" method="post">
     <input type="hidden" name="search_form" value="filter_search">
+
+    <!-- Кнопки «Открыть жанры» / «Закрыть жанры» -->
     <div class="genre-btns">
       <button id="openGenresBtn" type="button">Открыть жанры</button>
       <button id="closeGenresBtn" style="display: none;" type="button">Закрыть жанры</button>
     </div>
+
+    <!-- Список жанров -->
     <div class="genres-list">
-      <div th:each="genre : ${uniq_genres}" class="checkbox-item">
-        <label th:text="${genre}"></label>
-        <input type="checkbox" name="selected_genres" th:value="${genre}">
+      <!-- Перебираем список жанров uniqGenres (List<String>) -->
+      <div th:each="item : ${uniqGenres}" class="checkbox-item">
+        <!-- Выводим название жанра -->
+        <label th:text="${item}"></label>
+        <!-- Значение value у checkbox = сам жанр -->
+        <input type="checkbox" name="selected_genres" th:value="${item}">
       </div>
     </div>
+
     <label>Тип</label>
     <div class="type-list">
       <div class="checkbox-item">
         <label>Манга</label>
-        <input type="checkbox" name="selected_type" value="манга">
+        <input type="checkbox" name="selected_type" value="манга"><br>
       </div>
       <div class="checkbox-item">
         <label>Ранобе</label>
-        <input type="checkbox" name="selected_type" value="ранобе">
+        <input type="checkbox" name="selected_type" value="ранобе"><br>
       </div>
       <div class="checkbox-item">
         <label>Аниме</label>
-        <input type="checkbox" name="selected_type" value="аниме">
+        <input type="checkbox" name="selected_type" value="аниме"><br>
       </div>
     </div>
+
     <div class="chapter-input">
-      <label for="chapterStart">Количество глав:</label>
+      <label for="chapterStart">Количество глав:</label><br>
       <input type="number" id="chapterStart" placeholder="от" name="chapter_start" min="0">
       <label for="chapterEnd">-</label>
       <input type="number" id="chapterEnd" placeholder="до" name="chapter_end" min="0">
     </div>
+
     <div class="year-input">
-      <label for="yearStart">Год:</label>
+      <label for="yearStart">Год:</label><br>
       <input type="number" id="yearStart" placeholder="от" name="year_start" min="1900">
       <label for="yearEnd">-</label>
       <input type="number" id="yearEnd" placeholder="до" name="year_end" min="1900">
     </div>
-    <div>
-      <input type="submit" value="Показать">
-      <input type="reset" value="Сбросить">
-    </div>
+
+    <div style="clear: both;"></div>
+
+    <input type="submit" name="submit" value="Показать">
+    <input type="reset" name="clear" value="Сбросить">
   </form>
 </div>
 
-<div class="container">
-  <div th:if="${titles != null}" class="seeAll">
-    <div class="topic">Результаты поиска:</div>
-    <div class="grid-container">
-      <div th:each="title : ${titles}" class="grid-item">
-        <a th:href="@{/titles/{name}(name=${title.nameOnEnglish})}">
-          <img th:src="${title.cover}" class="grid-img item" alt="image">
-        </a>
-        <div class="card_content" th:text="${title.nameOnRussian}"></div>
-        <div class="infaPriNavodke">
-          <p>Год: <b th:text="${title.year}"></b></p>
-          <p>Жанры: <b th:text="${title.genres}"></b></p>
-          <p>Глав: <b th:text="${title.glavaCount}"></b></p>
-          <p>Рейтинг: <b th:text="${title.rating}"></b></p>
+<!-- Мобильная форма фильтров -->
+<div class="mobile-sort">
+  <div style="display:flex;width:100%;justify-content:center">
+    <button id="showButton">Фильтры</button>
+  </div>
+
+  <div class="mobile-filtri" id="elementToShow" style="display: none;">
+    <br><br><br>
+    <div style="display:flex;justify-content: space-between; align-items: center;">
+      <span>Фильтры</span>
+      <button id="closeButtonm">&times;</button>
+    </div>
+
+    <form action="/poisk" method="post">
+      <input type="hidden" name="search_form" value="filter_search">
+
+      <!-- Жанры -->
+      <div style="display:block" class="genres-list">
+        <div th:each="item : ${uniqGenres}" class="checkbox-item">
+          <label th:text="${item}"></label>
+          <input type="checkbox" name="selected_genres" th:value="${item}">
+        </div>
+      </div>
+
+      <!-- Тип (манга/ранобе/аниме) -->
+      <div class="type-list">
+        <div class="checkbox-item">
+          <label>Манга</label>
+          <input type="checkbox" name="selected_type" value="манга">
+        </div>
+        <div class="checkbox-item">
+          <label>Ранобе</label>
+          <input type="checkbox" name="selected_type" value="ранобе">
+        </div>
+        <div class="checkbox-item">
+          <label>Аниме</label>
+          <input type="checkbox" name="selected_type" value="аниме">
+        </div>
+      </div>
+
+      <div class="chapter-input">
+        <label for="chapterStart">Количество глав:</label><br>
+        <input type="number" id="chapterStart" placeholder="от" name="chapter_start" min="0">
+        <label for="chapterEnd">-</label>
+        <input type="number" id="chapterEnd" placeholder="до" name="chapter_end" min="0">
+      </div>
+
+      <div class="year-input">
+        <label for="yearStart">Год:</label><br>
+        <input type="number" id="yearStart" placeholder="от" name="year_start" min="1900">
+        <label for="yearEnd">-</label>
+        <input type="number" id="yearEnd" placeholder="до" name="year_end" min="1900">
+      </div>
+
+      <div style="clear: both;"></div>
+      <div class="show_reset">
+        <input type="submit" name="submit" value="Показать">
+        <input type="reset" name="clear" value="Сбросить">
+      </div>
+    </form>
+  </div>
+</div>
+
+<center>
+  <div class="container">
+
+    <!-- Если есть результаты (titles), показываем -->
+    <div th:if="${titles != null and !#lists.isEmpty(titles)}">
+
+      <div class="seeAll">
+        <div class="topic">Результаты поиска:</div>
+        <div class="sort-buttons">
+          <label for="sort_by">Сортировать по:</label>
+          <select class="sortirovka" name="sort_by" id="sort_by" onchange="sortTitles(this.value)">
+            <option value="titleAsc">Названию (А-Я)</option>
+            <option value="titleDesc">Названию (Я-А)</option>
+            <option value="chapterAsc">Количеству глав (↑)</option>
+            <option value="chapterDesc">Количеству глав (↓)</option>
+            <option value="viewsAsc">Просмотрам (↑)</option>
+            <option value="viewsDesc">Просмотрам (↓)</option>
+            <option value="ratingAsc">Рейтингу (↑)</option>
+            <option value="ratingDesc">Рейтингу (↓)</option>
+          </select>
+        </div>
+      </div>
+      <hr>
+
+      <!-- Выводим карточки найденных тайтлов -->
+      <div class="grid-container">
+        <!-- Перебираем List<Title> -->
+        <div class="grid-item"
+             th:each="t : ${titles}"
+             th:attr="data-chapter=${t.glavaCount}, data-views=${t.amountOfViews}">
+
+          <!-- Ссылка: название на англ для параметра -->
+          <a class="image-con" th:href="@{/titles/{nazvanie}(nazvanie=${t.nameOnEnglish})}">
+            <!-- Обложка -->
+            <img th:src="${t.cover}" class="grid-img item" alt="image">
+            <!-- Количество просмотров -->
+            <span class="view-count"
+                  th:text="${@FDATABASEService.numerize(t.amountOfViews)} + ' просмотров'"></span>
+          </a>
+
+          <!-- Название (русское) -->
+          <div class="card_content" th:text="${t.nameOnRussian}"></div>
+
+          <div class="infaPriNavodke">
+            <h2 th:text="${t.nameOnRussian}"></h2>
+            <p>Год:<b class="text_v_infa_pri_navodke" th:text="${t.year}"></b></p>
+
+            <p>Жанры:
+              <b class="text_v_infa_pri_navodke"
+                 th:each="g : ${#strings.arraySplit(t.genres, ';')}"
+                 th:text="${g} + ' '"></b>
+            </p>
+
+            <p>Глав:
+              <b class="text_v_infa_pri_navodke" th:text="${t.glavaCount}"></b>
+            </p>
+
+            <div class="containerz">
+              <!-- Если t.rating = null, то показываем 0 -->
+              <input id="input-1"
+                     name="input-1"
+                     class="rating rating-loading"
+                     data-min="0" data-max="5" data-step="0.1"
+                     th:value="${t.rating != null ? t.rating : 0}">
+            </div>
+
+            <!-- Ограничиваем описание 300 символами -->
+            <p id="description"
+               th:text="${(#strings.length(t.description) > 300)
+                                  ? #strings.substring(t.description,0,300) + '...'
+                                  : t.description}">
+            </p>
+          </div>
+        </div>
+      </div><!-- /th:if для titles -->
+
+    <!-- Если есть data (например, альтернативный результат) -->
+    <div th:if="${data != null and !#lists.isEmpty(data)}">
+      <div class="seeAll">
+        <div class="topic">Результаты поиска:</div>
+      </div>
+      <hr>
+      <div class="grid-container">
+        <div class="grid-item" th:each="t : ${data}">
+          <a class="image-con" th:href="${t[2]}">
+            <img th:src="${t[1]}" class="grid-img item" alt="image">
+          </a>
+          <div class="card_content" th:text="${t[0]}"></div>
         </div>
       </div>
     </div>
   </div>
-</div>
+    <br><br><br><br>
+</center>
+
+<!-- Скрипты для адаптивной фильтрации, сортировки и т.п. -->
+<script>
+  // Пример проверки координат для .infaPriNavodke
+  const infaElements = document.querySelectorAll('.infaPriNavodke');
+  infaElements.forEach((element) => {
+      const bounding = element.getBoundingClientRect();
+      const isInViewport = (
+          bounding.left >= 0 &&
+          bounding.right <= (window.innerWidth || document.documentElement.clientWidth)
+      );
+      if (!isInViewport) {
+          element.style.left = 'auto';
+          element.style.right = '100%';
+          element.style.transform = 'translate(-100%, -50%)';
+      }
+  });
+</script>
+
+<script>
+  // Сортировка тайтлов
+  function sortTitles(criteria) {
+      var titles = document.querySelectorAll('.grid-item');
+      var titlesArray = Array.prototype.slice.call(titles);
+
+      titlesArray.sort(function(a, b) {
+          var valueA, valueB;
+
+          switch(criteria) {
+              case 'titleAsc':
+                  valueA = a.querySelector('.card_content').textContent;
+                  valueB = b.querySelector('.card_content').textContent;
+                  return valueA.localeCompare(valueB);
+              case 'titleDesc':
+                  valueA = a.querySelector('.card_content').textContent;
+                  valueB = b.querySelector('.card_content').textContent;
+                  return valueB.localeCompare(valueA);
+              case 'chapterAsc':
+                  valueA = parseInt(a.dataset.chapter);
+                  valueB = parseInt(b.dataset.chapter);
+                  return valueA - valueB;
+              case 'chapterDesc':
+                  valueA = parseInt(a.dataset.chapter);
+                  valueB = parseInt(b.dataset.chapter);
+                  return valueB - valueA;
+              case 'viewsAsc':
+                  valueA = parseInt(a.dataset.views);
+                  valueB = parseInt(b.dataset.views);
+                  return valueA - valueB;
+              case 'viewsDesc':
+                  valueA = parseInt(a.dataset.views);
+                  valueB = parseInt(b.dataset.views);
+                  return valueB - valueA;
+              case 'ratingAsc':
+                  valueA = parseFloat(a.querySelector('.rating').value);
+                  valueB = parseFloat(b.querySelector('.rating').value);
+                  valueA = isNaN(valueA) ? 0 : valueA;
+                  valueB = isNaN(valueB) ? 0 : valueB;
+                  return valueA - valueB;
+              case 'ratingDesc':
+                  valueA = parseFloat(a.querySelector('.rating').value);
+                  valueB = parseFloat(b.querySelector('.rating').value);
+                  valueA = isNaN(valueA) ? 0 : valueA;
+                  valueB = isNaN(valueB) ? 0 : valueB;
+                  return valueB - valueA;
+              default:
+                  return 0;
+          }
+      });
+
+      var gridContainer = document.querySelector('.grid-container');
+      gridContainer.innerHTML = '';
+      titlesArray.forEach(function(title) {
+          gridContainer.appendChild(title);
+      });
+  }
+</script>
+
+<script>
+  // Кнопки «Открыть жанры» / «Закрыть жанры»
+  const openGenresBtn = document.getElementById('openGenresBtn');
+  const closeGenresBtn = document.getElementById('closeGenresBtn');
+  const genresList = document.querySelector('.genres-list');
+
+  openGenresBtn.addEventListener('click', function () {
+      genresList.style.display = 'block';
+      openGenresBtn.style.display = 'none';
+      closeGenresBtn.style.display = 'block';
+  });
+
+  closeGenresBtn.addEventListener('click', function () {
+      genresList.style.display = 'none';
+      openGenresBtn.style.display = 'block';
+      closeGenresBtn.style.display = 'none';
+  });
+
+  // Сохранение фильтров (жанры, кол-во глав, год) в localStorage
+  document.addEventListener('DOMContentLoaded', function() {
+      const filterForm = document.querySelector('.forma-sort form');
+
+      const savedGenres = localStorage.getItem('selected_genres');
+      const savedChapterStart = localStorage.getItem('chapter_start');
+      const savedChapterEnd = localStorage.getItem('chapter_end');
+      const savedYearStart = localStorage.getItem('year_start');
+      const savedYearEnd = localStorage.getItem('year_end');
+
+      if (savedGenres) {
+          const genres = savedGenres.split(',');
+          genres.forEach(genre => {
+              const checkbox = filterForm.querySelector(`input[value="${genre}"]`);
+              if (checkbox) {
+                  checkbox.checked = true;
+              }
+          });
+      }
+
+      if (savedChapterStart) {
+          const chapterStartInput = filterForm.querySelector('#chapterStart');
+          if (chapterStartInput) {
+              chapterStartInput.value = savedChapterStart;
+          }
+      }
+
+      if (savedChapterEnd) {
+          const chapterEndInput = filterForm.querySelector('#chapterEnd');
+          if (chapterEndInput) {
+              chapterEndInput.value = savedChapterEnd;
+          }
+      }
+
+      if (savedYearStart) {
+          const yearStartInput = filterForm.querySelector('#yearStart');
+          if (yearStartInput) {
+              yearStartInput.value = savedYearStart;
+          }
+      }
+
+      if (savedYearEnd) {
+          const yearEndInput = filterForm.querySelector('#yearEnd');
+          if (yearEndInput) {
+              yearEndInput.value = savedYearEnd;
+          }
+      }
+
+      filterForm.addEventListener('submit', function() {
+          const selectedGenres = Array.from(filterForm.querySelectorAll('input[name="selected_genres"]:checked'))
+              .map(checkbox => checkbox.value)
+              .join(',');
+          localStorage.setItem('selected_genres', selectedGenres);
+
+          const chapterStart = filterForm.querySelector('#chapterStart').value;
+          localStorage.setItem('chapter_start', chapterStart);
+
+          const chapterEnd = filterForm.querySelector('#chapterEnd').value;
+          localStorage.setItem('chapter_end', chapterEnd);
+
+          const yearStart = filterForm.querySelector('#yearStart').value;
+          localStorage.setItem('year_start', yearStart);
+
+          const yearEnd = filterForm.querySelector('#yearEnd').value;
+          localStorage.setItem('year_end', yearEnd);
+      });
+
+      const resetButton = filterForm.querySelector('input[type="reset"]');
+      resetButton.addEventListener('click', function() {
+          localStorage.removeItem('selected_genres');
+          localStorage.removeItem('chapter_start');
+          localStorage.removeItem('chapter_end');
+          localStorage.removeItem('year_start');
+          localStorage.removeItem('year_end');
+      });
+  });
+</script>
+
+<script>
+  // Сохранение типа (манга/ранобе/аниме) в localStorage
+  function saveTitleType() {
+      const selectedTypeInputs = document.querySelectorAll('input[name="selected_type"]:checked');
+      let selectedType = '';
+      selectedTypeInputs.forEach(input => {
+          selectedType += input.value + ',';
+      });
+      selectedType = selectedType.slice(0, -1);
+      localStorage.setItem('title_type', selectedType);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+      const filterForm = document.querySelector('.forma-sort form');
+      const savedTitleType = localStorage.getItem('title_type');
+      if (savedTitleType) {
+          const titleTypeValues = savedTitleType.split(',');
+          titleTypeValues.forEach(type => {
+              const checkbox = filterForm.querySelector(`input[value="${type}"]`);
+              if (checkbox) {
+                  checkbox.checked = true;
+              }
+          });
+      } else {
+          // Если ничего не выбрано, по умолчанию пусть «манга» будет отмечена
+          filterForm.querySelector('input[value="манга"]').checked = true;
+      }
+
+      // Пример логики, где если выбрали что-то кроме «манга», то «манга» снимается
+      const selectedTypeInputs = filterForm.querySelectorAll('input[name="selected_type"]');
+      selectedTypeInputs.forEach(input => {
+          input.addEventListener('change', function() {
+              if (this.value !== 'манга') {
+                  const mangaCheckbox = filterForm.querySelector('input[value="манга"]');
+                  if (!mangaCheckbox.checked) {
+                      mangaCheckbox.checked = false;
+                  }
+              }
+          });
+      });
+
+      filterForm.addEventListener('submit', function() {
+          saveTitleType();
+      });
+
+      const resetButton = filterForm.querySelector('input[type="reset"]');
+      resetButton.addEventListener('click', function() {
+          localStorage.removeItem('title_type');
+          // Снова ставим «манга» по умолчанию
+          filterForm.querySelector('input[value="манга"]').checked = true;
+      });
+  });
+</script>
+
+<script>
+  // Логика открытия/закрытия мобильного блока фильтра
+  const showButton = document.getElementById('showButton');
+  const elementToShow = document.getElementById('elementToShow');
+  const closeButton = document.getElementById('closeButtonm');
+
+  showButton.addEventListener('click', function() {
+      if (elementToShow.style.display === 'none') {
+          elementToShow.style.display = 'block';
+          showButton.style.display = 'none';
+      } else {
+          elementToShow.style.display = 'none';
+          showButton.style.display = 'block';
+      }
+  });
+
+  closeButton.addEventListener('click', function() {
+      elementToShow.style.display = 'none';
+      showButton.style.display = 'block';
+  });
+</script>
+
+<!-- Подвал, скрипты -->
+<div th:replace="baza :: footer"></div>
+<div th:replace="baza :: scripts"></div>
+
 </body>
 </html>
