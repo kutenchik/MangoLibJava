@@ -48,11 +48,19 @@
   <!-- Контент главы -->
   <div class="nuTipDlyaRanobe" style="max-width: 900px; margin: 0 auto; background: white; padding-top: 20px;">
     <th:block th:each="c : ${contentGlavi}">
+      <!-- Если это заголовок (содержит 'Часть') -->
       <p th:if="${#strings.contains(c, 'Часть')}" th:utext="'<strong>' + ${c} + '</strong>'"></p>
-      <p th:if="${c.startsWith('http')}" th:utext="'<img style=\'max-width:100%\' src=\'' + ${c} + '\' />'"></p>
+
+      <!-- Если это изображение (начинается с http) -->
+      <th:block th:if="${c.startsWith('http')}">
+        <img style="max-width:100%" th:src="${c}" />
+      </th:block>
+
+      <!-- Если это обычный текст -->
       <p th:if="${!#strings.contains(c, 'Часть') and !c.startsWith('http')}" th:text="${c}"></p>
     </th:block>
   </div>
+
 
   <!-- Навигация между главами -->
   <div style="display: flex; justify-content: space-evenly; margin-top: 20px;">

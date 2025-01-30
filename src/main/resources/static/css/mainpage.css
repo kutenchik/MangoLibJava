@@ -608,8 +608,11 @@
     .grid-item {
       display: flex;
       flex-direction: column;
-      width: auto !important;
+      /*width: auto !important;*/
       height: 100%;
+      overflow-wrap: break-word; /* Разрешает перенос слов */
+          word-wrap: break-word; /* Переносит слова */
+          word-break: break-word;
     }
     .grid-img {
       height: 246.78px;

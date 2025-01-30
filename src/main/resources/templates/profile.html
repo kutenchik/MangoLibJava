@@ -90,8 +90,10 @@
           <div class="achievements-container">
             <div class="achievement" th:each="ach : ${userAchievements}">
               <img class="achievement-icon"
-                   th:src="${ach[2]}"
+                   th:src="${#strings.replace(ach[2], 'static', '')}"
                    th:alt="${ach[0]}"/>
+
+
               <h3 class="achievement-title" th:text="${ach[0]}"></h3>
               <p class="achievement-description" th:text="${ach[1]}"></p>
             </div>

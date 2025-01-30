@@ -1,14 +1,12 @@
 package com.example.crud.service;
 
 import com.example.crud.dto.ChapterDto;
-import com.example.crud.model.User;   // Если есть у вас, иначе сами создайте
 import com.example.crud.model.Title; // Аналогично
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.dao.EmptyResultDataAccessException;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -201,6 +199,14 @@ public class FDATABASEService {
             jdbcTemplate.update(sql, rus, eng, description, year, coverUrl, genres, type);
         } catch(Exception e) {
             e.printStackTrace();
+        }
+    }
+    public Double getTitleRating(Long titleId) {
+        try {
+            String sql = "SELECT AVG(rating) FROM user_ratings WHERE title_id = ?";
+            return jdbcTemplate.queryForObject(sql, Double.class, titleId);
+        } catch (EmptyResultDataAccessException e) {
+            return null; // Если нет оценок
         }
     }
 
@@ -1178,98 +1184,90 @@ public class FDATABASEService {
      * В Python у вас была логика "если есть фавориты, взять их жанры", etc...
      * Ниже — упрощённый пример
      */
-    public List<Object[]> findUserRecommendations(Long userId) {
-        // Проверяем, есть ли у пользователя фавориты
+    public List<Title> findUserRecommendations(Long userId) {
         try {
+            // Проверяем, есть ли у пользователя фавориты
             String cntSql = "SELECT COUNT(*) FROM favourites WHERE user_id=?";
             int count = jdbcTemplate.queryForObject(cntSql, Integer.class, userId);
-            if(count==0) {
+            if (count == 0) {
                 return Collections.emptyList();
             }
-            // Всё, что ниже, будет упрощённо. Вы качали все тайтлы, смотрели общие жанры...
-            // Для демонстрации сделаем коротко:
+
+            // Получаем все тайтлы
             String sqlAll = """
-                SELECT t.name_on_russian, t.cover, t.name_on_english, t.genres, t.amount_of_views,
-                       (SELECT count(*) FROM glava gg WHERE gg.title_id=t.title_id) +
-                       (SELECT count(*) FROM ranobe_glavi rr WHERE rr.title_id=t.title_id) +
-                       (SELECT count(*) FROM anime_serii aa WHERE aa.title_id=t.title_id) AS glava_count,
-                       t.year,
-                       t.description,
-                       (SELECT avg(rating) FROM user_ratings ur WHERE ur.title_id=t.title_id) as average_rating,
-                       t.type
-                FROM titles t
-            """;
-            List<Object[]> allTitles = jdbcTemplate.query(sqlAll, (rs, rowNum)-> new Object[]{
-                    rs.getString(1),
-                    rs.getString(2),
-                    rs.getString(3),
-                    rs.getString(4),
-                    rs.getInt(5),
-                    rs.getInt(6),
-                    rs.getInt(7),
-                    rs.getString(8),
-                    rs.getDouble(9),
-                    rs.getString(10)
+            SELECT t.title_id, t.name_on_russian, t.cover, t.name_on_english, t.genres, t.amount_of_views,
+                   (
+                       COALESCE((SELECT count(*) FROM glava WHERE title_id=t.title_id), 0) +
+                       COALESCE((SELECT count(*) FROM ranobe_glavi WHERE title_id=t.title_id), 0) +
+                       COALESCE((SELECT count(*) FROM anime_serii WHERE title_id=t.title_id), 0)
+                   ) AS glava_count,
+                   t.year, t.description,
+                   (SELECT AVG(rating) FROM user_ratings WHERE title_id=t.title_id) AS avg_rating,
+                   t.type
+            FROM titles t
+        """;
+
+            List<Title> allTitles = jdbcTemplate.query(sqlAll, (rs, rowNum) -> {
+                Title title = new Title();
+                title.setTitleId(rs.getLong("title_id"));
+                title.setNameOnRussian(rs.getString("name_on_russian"));
+                title.setCover(rs.getString("cover"));
+                title.setNameOnEnglish(rs.getString("name_on_english"));
+                title.setGenres(rs.getString("genres"));
+                title.setAmountOfViews(rs.getInt("amount_of_views"));
+                title.setGlavaCount(rs.getInt("glava_count"));
+                title.setYear(rs.getInt("year"));
+                title.setDescription(rs.getString("description"));
+                double avgRating = rs.getDouble("avg_rating");
+                title.setRating(rs.wasNull() ? null : avgRating);
+                title.setType(rs.getString("type"));
+                return title;
             });
-            // Фавориты пользователя
+
+            // Получаем фавориты пользователя
             String sqlFav = """
-                SELECT t.name_on_russian, t.cover, t.name_on_english, t.genres, t.amount_of_views,
-                       (SELECT count(*) FROM glava gg WHERE gg.title_id=t.title_id) +
-                       (SELECT count(*) FROM ranobe_glavi rr WHERE rr.title_id=t.title_id) +
-                       (SELECT count(*) FROM anime_serii aa WHERE aa.title_id=t.title_id) AS glava_count,
-                       t.year,
-                       t.description,
-                       (SELECT avg(rating) FROM user_ratings ur WHERE ur.title_id=t.title_id) as average_rating,
-                       t.type
-                FROM favourites f
-                JOIN titles t ON t.title_id=f.title_id
-                WHERE f.user_id=?
-            """;
-            List<Object[]> userFavorites = jdbcTemplate.query(sqlFav, (rs, rowNum)-> new Object[]{
-                    rs.getString(1),
-                    rs.getString(2),
-                    rs.getString(3),
-                    rs.getString(4),
-                    rs.getInt(5),
-                    rs.getInt(6),
-                    rs.getInt(7),
-                    rs.getString(8),
-                    rs.getDouble(9),
-                    rs.getString(10)
-            }, userId);
-            Set<String> userGenres = new HashSet<>();
-            Set<String> userFavTitles = new HashSet<>();
-            for(Object[] row : userFavorites) {
-                String rusName = (String) row[0];
-                userFavTitles.add(rusName);
-                String allG = (String) row[3];
-                if(allG!=null) {
-                    userGenres.addAll(Arrays.asList(allG.split(";")));
+            SELECT t.genres
+            FROM favourites f
+            JOIN titles t ON t.title_id = f.title_id
+            WHERE f.user_id=?
+        """;
+
+            List<String> userGenres = jdbcTemplate.queryForList(sqlFav, String.class, userId);
+
+            // Вычисляем общие жанры
+            Set<String> userGenresSet = new HashSet<>();
+            for (String genres : userGenres) {
+                if (genres != null) {
+                    userGenresSet.addAll(Arrays.asList(genres.split(";")));
                 }
             }
-            // Считаем "очки" = кол-во общих жанров
-            Map<Object[], Integer> scores = new HashMap<>();
-            for(Object[] row : allTitles) {
-                String rusName = (String) row[0];
-                if(userFavTitles.contains(rusName)) {
-                    continue; // уже в фаворитах
+
+            // Считаем очки для каждого тайтла
+            Map<Title, Integer> scores = new HashMap<>();
+            for (Title title : allTitles) {
+                if (userGenresSet.isEmpty() || title.getGenres() == null) {
+                    continue;
                 }
-                String g = (String) row[3];
-                if(g == null) g = "";
-                Set<String> gens = new HashSet<>(Arrays.asList(g.split(";")));
-                gens.retainAll(userGenres);  // пересечение
-                scores.put(row, gens.size());
+
+                Set<String> titleGenresSet = new HashSet<>(Arrays.asList(title.getGenres().split(";")));
+                titleGenresSet.retainAll(userGenresSet); // пересечение
+                if (!titleGenresSet.isEmpty()) {
+                    scores.put(title, titleGenresSet.size());
+                }
             }
-            // Сортируем по убыванию
-            List<Map.Entry<Object[], Integer>> list = new ArrayList<>(scores.entrySet());
-            list.sort((a,b)->Integer.compare(b.getValue(), a.getValue()));
-            // Берём первые 10
-            List<Object[]> recommendations = new ArrayList<>();
-            for(int i=0; i<Math.min(10, list.size()); i++) {
-                recommendations.add(list.get(i).getKey());
+
+            // Сортируем по количеству совпадений
+            List<Map.Entry<Title, Integer>> sortedScores = new ArrayList<>(scores.entrySet());
+            sortedScores.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
+
+            // Формируем список рекомендованных тайтлов
+            List<Title> recommendations = new ArrayList<>();
+            for (int i = 0; i < Math.min(10, sortedScores.size()); i++) {
+                recommendations.add(sortedScores.get(i).getKey());
             }
+
             return recommendations;
-        } catch(Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return Collections.emptyList();
         }

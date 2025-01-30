@@ -1,95 +1,184 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
+    <!-- Подключаем ваш общий head (CSS/JS), если в baza.html есть блок ::links -->
     <th:block th:replace="baza :: links"></th:block>
-    <link rel="stylesheet" th:href="@{/css/profile.css}">
-    <title>Профиль пользователя</title>
+
+    <!-- CSS для профиля -->
+    <link th:href="@{/css/profile.css}" rel="stylesheet"/>
+
+    <title>Просмотр профиля</title>
 </head>
 <body>
 
+<!-- Меню, если в baza.html есть блок ::menu -->
 <div th:replace="baza :: menu"></div>
 
-<div class="content1" style="margin-top:60px;">
+<center>
     <div class="main main-raised">
         <div class="profile-content">
             <div class="container">
+                <!-- Шапка профиля -->
                 <div class="row">
                     <div class="col-md-6 ml-auto mr-auto">
                         <div class="profile">
+
                             <div class="avatar">
+                                <!-- Аватар другого пользователя -->
                                 <img class="pic_in_profile"
-                                     th:src="${profile_pic != null}
-                                             ? @{/uploads/__${profile_pic}__}
-                                             : @{https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Circle-icons-profile.svg/1200px-Circle-icons-profile.svg.png}">
+                                     th:src="${profilePic != null
+              ? #strings.replace(profilePic, 'static', '')
+              : 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Circle-icons-profile.svg/1200px-Circle-icons-profile.svg.png'}"
+                                     alt="Avatar"/>
+
                                 <div class="level">
                                     <div class="level_and_exp">
-                                        <h4>Уровень: <span th:text="${level}"></span></h4>
-                                        <p th:text="${rem_exp + '/' + lvl_porog}"></p>
+                                        <h4>Уровень:
+                                            <span th:text="${level}">1</span>
+                                        </h4>
+                                        <p>
+                                            <span th:text="${remExp}">0</span> /
+                                            <span th:text="${lvlPorog}">10</span>
+                                        </p>
                                     </div>
                                     <div id="progressBar">
                                         <div id="progress"></div>
                                     </div>
-                                </div>
-                            </div>
+                                </div><!-- /.level -->
+                            </div><!-- /.avatar -->
+
                             <div class="name">
-                                <h3 class="title" th:text="${username}"></h3>
-                                <h3>Статус: <span th:text="${status}"></span></h3>
-                                <h6>ID пользователя: <span th:text="${id}"></span></h6>
+                                <!-- theUser.username, theUser.id, theUser.status -->
+                                <h3 class="title"
+                                    th:text="${theUser.username}">Username</h3>
+
+                                <h3>
+                                    Статус:
+                                    <span th:text="${theUser.status}">User</span>
+                                </h3>
+
+                                <h6>ID пользователя:
+                                    <span th:text="${theUser.id}">123</span>
+                                </h6>
+
+                                <!-- Описание (без редактирования) -->
                                 <h3 th:utext="${description}">Описание</h3>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                            </div><!-- /.name -->
+                        </div><!-- /.profile -->
+                    </div><!-- /.col-md-6 -->
+                </div><!-- /.row -->
 
+                <!-- Достижения другого пользователя -->
                 <h2>Достижения:</h2>
-                <div class="achievements-container" th:if="${user_achievements}">
-                    <div class="achievement" th:each="ach : ${user_achievements}">
-                        <img class="achievement-icon"
-                             th:src="@{/} + ${ach[2]}"
-                             th:alt="${ach[0]}">
-                        <h3 class="achievement-title" th:text="${ach[0]}"></h3>
-                        <p class="achievement-description" th:text="${ach[1]}"></p>
-                    </div>
-                </div>
+                <div th:if="${userAchievements != null && !#lists.isEmpty(userAchievements)}">
+                    <div class="achievements-container">
+                        <!-- userAchievements - это List<Object[]>, где:
+                             ach[0] = название
+                             ach[1] = описание
+                             ach[2] = ссылка на картинку -->
+                        <div class="achievement" th:each="ach : ${userAchievements}">
+                            <img class="achievement-icon"
+                                 th:src="@{${#strings.replace(ach[2], 'static', '')}}"
+                                 th:alt="${ach[0]}"/>
 
-                <!-- Избранное -->
-                <div th:if="${fav != null}">
-                    <div class="seeAll">
-                        <div class="topic">Избранное</div>
-                    </div>
-                    <hr>
-                    <div class="grid-container" th:each="t : ${fav}">
-                        <div class="grid-item">
-                            <a class="image-con"
-                               th:href="@{/showTitle/{nazvanie}(nazvanie=${t[2]})}">
-                                <img th:src="${t[1]}" class="grid-img item" alt="image">
-                            </a>
-                            <div class="card_content" th:text="${t[0]}"></div>
-                            <!-- ... -->
+                            <h3 class="achievement-title"
+                                th:text="${ach[0]}">Достижение</h3>
+                            <p class="achievement-description"
+                               th:text="${ach[1]}"></p>
                         </div>
                     </div>
                 </div>
+                <div th:unless="${userAchievements != null && !#lists.isEmpty(userAchievements)}">
+                    <h2>Пусто</h2>
+                </div>
 
-            </div>
-        </div>
-    </div>
-</div>
+                <!-- Блок "Избранное" -->
+                <h2>Избранное</h2>
+                <div th:if="${fav != null && !#lists.isEmpty(fav)}">
+                    <div class="grid-container">
+                        <!-- fav - это List<Title> -->
+                        <div class="grid-item" th:each="t : ${fav}">
+                            <!-- Ссылка на страницу конкретного тайтла -->
+                            <a class="image-con"
+                               th:href="@{/titles/{nazvanie}(nazvanie=${t.nameOnEnglish})}">
+                                <img th:src="${t.cover}" class="grid-img item" alt="cover">
 
+                                <!-- Читабельное кол-во просмотров
+                                     Можно сразу вызывать numerize(t.amountOfViews) -->
+                                <span class="view-count"
+                                      th:text="${@FDATABASEService.numerize(t.amountOfViews)} + ' просмотров'">
+                                </span>
+                            </a>
+                            <!-- Название -->
+                            <div class="card_content"
+                                 th:text="${t.nameOnRussian}">Название</div>
+
+                            <!-- Подробная инфа -->
+                            <div class="infaPriNavodke">
+                                <h2 th:text="${t.nameOnRussian}">Название</h2>
+                                <p>Год:
+                                    <b class="text_v_infa_pri_navodke"
+                                       th:text="${t.year}">2023</b>
+                                </p>
+                                <p>Жанры:
+                                    <b class="text_v_infa_pri_navodke"
+                                       th:each="g : ${#strings.arraySplit(t.genres, ';')}"
+                                       th:text="${g + ' '}">жанр</b>
+                                </p>
+                                <p>Глав:
+                                    <b class="text_v_infa_pri_navodke"
+                                       th:text="${t.glavaCount != null ? t.glavaCount : 0}">0</b>
+                                </p>
+
+                                <!-- Рейтинг (если используете звёзды) -->
+                                <div class="containerz">
+                                    <input id="input-1"
+                                           name="input-1"
+                                           class="rating rating-loading"
+                                           data-min="0" data-max="5" data-step="0.1"
+                                           th:value="${t.rating != null ? t.rating : 0}"/>
+                                </div>
+
+                                <!-- Описание (обрезаем до 300 символов при необходимости) -->
+                                <p id="description"
+                                   th:text="${
+                                     #strings.length(t.description) > 300
+                                       ? #strings.substring(t.description, 0, 300).concat('...')
+                                       : t.description
+                                   }">
+                                </p>
+                            </div><!-- /.infaPriNavodke -->
+                        </div><!-- /.grid-item -->
+                    </div><!-- /.grid-container -->
+                </div>
+                <div th:unless="${fav != null && !#lists.isEmpty(fav)}">
+                    <p>Нет избранных работ</p>
+                </div>
+            </div><!-- /.container -->
+        </div><!-- /.profile-content -->
+    </div><!-- /.main main-raised -->
+</center>
+
+<!-- Футер/скрипты -->
+<div th:replace="baza :: footer"></div>
+<div th:replace="baza :: scripts"></div>
+
+<!-- Скрипт для прогресс-бара -->
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const progressBar = document.getElementById('progress');
-        const text = document.querySelector('.level_and_exp p').textContent;
-        const parts = text.split('/');
-        if (parts.length === 2) {
-            let expValue = parseInt(parts[0]) || 0;
-            let totalValue = parseInt(parts[1]) || 100;
-            const progressWidth = (expValue / totalValue) * 100;
-            progressBar.style.width = progressWidth + '%';
-        }
+        if (!progressBar) return;
+
+        const infoP = document.querySelector('.level_and_exp p');
+        if (!infoP) return;
+
+        const [expValue, totalValue] = infoP.textContent.split('/');
+        if (!expValue || !totalValue) return;
+
+        const progressWidth = (parseFloat(expValue) / parseFloat(totalValue)) * 100;
+        progressBar.style.width = progressWidth + '%';
     });
 </script>
 
-<div th:replace="baza :: footer"></div>
-<div th:replace="baza :: scripts"></div>
 </body>
 </html>

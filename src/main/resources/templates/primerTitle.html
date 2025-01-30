@@ -17,32 +17,52 @@
 
         <div>
           <!-- Кнопка "Продолжить чтение/просмотр" -->
+          <!-- Проверяем: есть ли у нас lastChapter -->
+          <div th:if="${lastChapter != null}">
+            <!-- Если lastChapter не ноль, показываем кнопку "Продолжить чтение/просмотр" -->
+            <a style="margin-left:15px;width:250px"
+               class="nextGlava"
+               th:href="@{/titles/{nazvanie}/{chapter}(nazvanie=${titleObj.nameOnEnglish}, chapter=${lastChapter})}">
+              <div style="width:250px" class="nextGlava">
+                <!-- Проверяем, есть ли вообще главы/серии -->
+                <div th:if="${#lists.size(glavi) > 0}"
+                     th:with="firstCh=${glavi.get(0)}">
+                  <b th:text="${
+           #strings.contains(firstCh.glavaName, 'серия')
+             ? 'Продолжить просмотр'
+             : 'Продолжить чтение'
+        }"></b>
+                </div>
+                <!-- Если таблица глав вообще пуста -->
+                <div th:if="${#lists.size(glavi) == 0}">
+                  <b>Читать с первой главы</b>
+                </div>
+              </div>
+            </a>
+          </div>
+
           <div th:if="${lastChapter == null}">
+            <!-- lastChapter == null => пользователь не читал,
+                 тогда кнопка "Читать с первой главы" или "Смотреть с 1 серии" -->
             <a style="margin-left:15px;width:250px"
                class="nextGlava"
                th:href="@{/titles/{nazvanie}/{chapter}(nazvanie=${titleObj.nameOnEnglish}, chapter=${1})}">
               <div style="width:250px" class="nextGlava">
-
-                <!-- Аналогично проверяем, есть ли главы -->
                 <div th:if="${#lists.size(glavi) > 0}"
                      th:with="firstCh=${glavi.get(0)}">
                   <b th:text="${
            #strings.contains(firstCh.glavaName, 'серия')
              ? 'Смотреть с 1 серии'
              : 'Читать с первой главы'
-        }">
-                    <!-- Текст по умолчанию -->
-                  </b>
+        }"></b>
                 </div>
-
-                <!-- Если glavi пустой -> "Читать с первой главы" -->
                 <div th:if="${#lists.size(glavi) == 0}">
                   <b>Читать с первой главы</b>
                 </div>
-
               </div>
             </a>
           </div>
+
 
 
 
@@ -79,7 +99,7 @@
                  name="input-1"
                  class="rating rating-loading"
                  data-min="0" data-max="5" data-step="0.1"
-                 th:value="${titleObj.rating != null ? titleObj.rating : 0}">
+                 th:value="${titleObj.getRating() != null ? titleObj.getRating() : 0}">
           <button style="width:100px" class="nextGlava"
                   onclick="submitRating()" type="button">
             Оценить
@@ -162,8 +182,9 @@
 <script>
   function submitRating() {
       const inputValue = document.getElementById('input-1').value;
+      const titleId = /* вставьте ID из Thymeleaf */ [[${titleObj.titleId}]];
+      fetch('/titles/' + titleId + '/rate', {
 
-      fetch('/titles/' + /* вставить ID */ '[titleId]/rate', {
           method: 'POST',
           headers: {
               'Content-Type': 'application/json',

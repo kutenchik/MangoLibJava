@@ -43,25 +43,18 @@
 
         <!-- Пример рандомной манги -->
         <a th:href="@{/random_manga}">
-            Рандом манга
+            Рандом
         </a>
 
         <!-- Если пользователь залогинен (Spring Security) -->
-        <sec:authorize access="isAuthenticated()">
-            <a th:href="@{/profile}">
-                Профиль
-            </a>
-            <a th:href="@{/logout}">
-                Выйти
-            </a>
-        </sec:authorize>
+        <th:block th:if="${#authentication.name == 'anonymousUser'}">
+            <a th:href="@{/login}">Войти</a>
+        </th:block>
 
-        <!-- Если НЕ залогинен -->
-        <sec:authorize access="!isAuthenticated()">
-            <a th:href="@{/login}">
-                Авторизоваться
-            </a>
-        </sec:authorize>
+        <th:block th:unless="${#authentication.name == 'anonymousUser'}">
+            <a th:href="@{/profile}">Профиль</a>
+        </th:block>
+
     </div>
 </th:block>
 

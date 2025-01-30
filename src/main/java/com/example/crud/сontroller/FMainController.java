@@ -1,6 +1,7 @@
 // src/main/java/com/example/demo/controller/FMainController.java
 
 package com.example.crud.сontroller;
+import org.springframework.security.core.GrantedAuthority;
 
 import com.example.crud.dto.ChapterDto;
 import com.example.crud.model.Title;
@@ -43,16 +44,24 @@ public class FMainController {
         // Пример "нумерации"
         // Получаем amount_of_views -> превращаем в "1K", "2K" и т.д.
         // Для демонстрации делаем простую логику
-        System.out.println("ogogooooooo");
 //        for (int i = 0; i < vse.size(); i++) {
 //            System.out.println(vse.get(i).getAmountOfViews());
 //        }
 //        for(int i=0;i<mostPopular.size();i++){
 //            System.out.println(mostPopular.get(i).getCover());
 //        }
+        if (auth != null && auth.isAuthenticated()) {
+            User currentUser = userRepo.findByUsername(auth.getName()).orElse(null);
+            if (currentUser != null) {
+                List<Title> recommend=dbService.findUserRecommendations(currentUser.getId());
+                model.addAttribute("recommendTitles",recommend);
+            }
+        }
+        else {
+            model.addAttribute("recommendTitles", Collections.emptyList());
+        }
         model.addAttribute("titles", vse);
         model.addAttribute("title", "Главная страница");
-        model.addAttribute("recommendTitles", Collections.emptyList());
         model.addAttribute("mostPopular", mostPopular);
         model.addAttribute("lastUpdatedTitles",lastUpdated);
         // Допустим, соберём в строку numerized
@@ -83,11 +92,10 @@ public class FMainController {
         model.addAttribute("titleObj", t);
         model.addAttribute("prosmotri", dbService.numerize(updatedViews));
         model.addAttribute("recomend_titles",recomendations);
-
+        t.setRating(dbService.getTitleRating(t.getTitleId()));
         // Загружаем главы в DTO-формате
         List<ChapterDto> glavi = dbService.getGlaviAsDto(t.getTitleId(), t.getType());
         model.addAttribute("glavi", glavi);
-        System.out.println(glavi.get(0).getGlavaName());
         // Если пользователь залогинен - проверяем избранное, прочитанные главы, lastChapter
         if (auth != null && auth.isAuthenticated()) {
             User currentUser = userRepo.findByUsername(auth.getName()).orElse(null);
@@ -115,16 +123,17 @@ public class FMainController {
     // Оценка тайтла
     @PostMapping("/titles/{titleId}/rate")
     public String rateTitle(@PathVariable("titleId") Long titleId,
-                            @RequestParam("rating") double rating,
+                            @RequestBody Map<String, Object> payload,
                             Authentication auth) {
-        // Аналог route('/titles/<int:title_id>/rate', methods=['POST'])
-        if(auth == null || !auth.isAuthenticated()) {
+        if (auth == null || !auth.isAuthenticated()) {
             return "redirect:/login";
         }
-        // Допустим, вы храните в таблице user_ratings
-        // Здесь можно просто сделать insert/update через jdbcTemplate
-        // ...
-        // dbService.addRatingToTitle(currentUserId, titleId, rating)
+        User currentUser = userRepo.findByUsername(auth.getName()).orElse(null);
+
+        // Извлечение рейтинга из JSON-поля
+        double rating = Double.parseDouble(payload.get("rating").toString());
+        dbService.addRatingToTitle(currentUser.getId(), titleId, rating);
+
         return "redirect:/titles/" + titleId;
     }
 
@@ -157,7 +166,6 @@ public class FMainController {
             return "redirect:/login";
         }
         Long userId = currentUser.getId();
-
         // Логика: проставляем статус "прочитанная глава"
         dbService.userChapterStatus(userId, titleId, nomerGlavi);
         model.addAttribute("currentUser",currentUser);
@@ -190,6 +198,7 @@ public class FMainController {
         model.addAttribute("nomer", nomerGlavi);
         model.addAttribute("curGlava", glavaName);
         model.addAttribute("titleName", titleNameRus);
+        dbService.addLastReadedChapter(userId,titleId,nomerGlavi);
         // В зависимости от типа (манга/ранобэ/аниме) — разный шаблон
         if (type.equals("манга")) {
             String[] pages = contentOrImages.split(";");
@@ -225,7 +234,6 @@ public class FMainController {
         }
         User currentUser = userRepo.findByUsername(auth.getName()).orElse(null);
         LocalDate today = LocalDate.now();
-
         // Форматирование даты
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         String formattedDate = today.format(formatter);
@@ -362,22 +370,85 @@ public class FMainController {
 
     // Просмотр другого пользователя
     @GetMapping("/users/{username}")
-    public String showAnotherUser(@PathVariable String username, Model model, Authentication auth) {
-        if(auth == null || !auth.isAuthenticated()) {
+    public String showAnotherUser(@PathVariable String username,
+                                  Model model,
+                                  Authentication auth) {
+        // 1) Проверяем авторизацию
+        if (auth == null || !auth.isAuthenticated()) {
             return "redirect:/login";
         }
+        // 2) Ищем пользователя по переданному username
         User user = userRepo.findByUsername(username).orElse(null);
-        if(user == null) {
+        if (user == null) {
+            // Можете вернуть "pageNotFound" или сделать редирект:
             return "pageNotFound";
         }
-        // Если это мы сами, перекидываем на /profile
+
+        // 3) Если это "наш" текущий пользователь -> перекидываем на /profile
         User currentUser = userRepo.findByUsername(auth.getName()).orElse(null);
-        if(currentUser != null && currentUser.getId().equals(user.getId())) {
+        if (currentUser != null && currentUser.getId().equals(user.getId())) {
             return "redirect:/profile";
         }
+
+        // 4) Добываем те же данные, что и в /profile, но для "user"
+        //    (ачивки, уровень, аватар, опис и т.п.)
+        List<Object[]> userAchievements = dbService.showUsersAchievements(user.getId());
+        model.addAttribute("userAchievements", userAchievements);
+
+        int experience = (user.getExp() != null) ? user.getExp() : 0;
+        int[] lvlInfo = dbService.getLevel(experience);  // [level, rem_exp, lvl_porog]
+        model.addAttribute("level",    lvlInfo[0]);
+        model.addAttribute("remExp",   lvlInfo[1]);
+        model.addAttribute("lvlPorog", lvlInfo[2]);
+
+//        String userRole = auth.getAuthorities().stream()
+//                .map(GrantedAuthority::getAuthority)
+//                .findFirst()
+//                .orElse("Участник"); // Теперь это String, без ошибки
+//
+//        System.out.println(userRole);
+        String profilePic = user.getProfilePic();
+        if (profilePic == null || profilePic.equals("None")) {
+            profilePic = null;
+        }
+        // Подставим описание, заменяя переносы строк <br>, если нужно
+        String description = (user.getDescription() != null)
+                ? user.getDescription().replace("\n","<br>")
+                : "Пусто";
+
+        model.addAttribute("profilePic",  profilePic);
+        model.addAttribute("description", description);
+
+        // 5) Избранное
+        List<String> favEnglish = dbService.getUserFavorites(user.getId());
+        List<Title> allTitles = dbService.getAllTitlesWithStats();
+        List<Title> fav = new ArrayList<>();
+        for (String eng : favEnglish) {
+            for (Title t : allTitles) {
+                if (eng.equals(t.getNameOnEnglish())) {
+                    fav.add(t);
+                }
+            }
+        }
+        model.addAttribute("fav", fav);
+
+        // Кол-во просмотров в "читабельном" формате
+        List<String> numerizedFav = new ArrayList<>();
+        for (Title t : fav) {
+            numerizedFav.add(t.getNameOnRussian() + ";" + dbService.numerize(t.getAmountOfViews()));
+        }
+        model.addAttribute("amountOfViewsFav", numerizedFav);
+
+        // 6) Кладём "theUser" — чтобы в шаблоне обращаться к user.username, user.status и т. п.
         model.addAttribute("theUser", user);
+        System.out.println(user.getUsername());
+        // Дополнительно userId, если нужно:
+        model.addAttribute("userId", user.getId());
+
+        // 7) Возвращаем шаблон "user" (например, user.html)
         return "user";
     }
+
 
     @GetMapping("/poisk")
     public String showSearchPage(Model model) {
@@ -554,9 +625,10 @@ public class FMainController {
     // Удаление комментария
     @PostMapping("/delete_comment")
     @ResponseBody
-    public String deleteComment(@RequestParam("comment_id") Long commentId) {
+    public String deleteComment(@RequestBody Map<String, Object> payload) {
+        Long commentId = Long.parseLong(payload.get("comment_id").toString());
         dbService.deleteComment(commentId);
-        // Возвращаем JSON или что-то
         return "{\"result\":\"ok\"}";
     }
+
 }

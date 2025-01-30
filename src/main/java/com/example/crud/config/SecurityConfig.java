@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -18,6 +19,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.thymeleaf.extras.springsecurity6.dialect.SpringSecurityDialect;
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity()
 @RequiredArgsConstructor
 public class SecurityConfig {
     @Autowired
@@ -35,18 +37,24 @@ public class SecurityConfig {
                 )
                 .formLogin(login -> login
                         .loginPage("/login")
+                        .usernameParameter("username") // Оставляем "username", так как в форме name="username"
+                        .passwordParameter("password") // Пароль остается "password"
                         .successHandler((request, response, authentication) -> {
-                            // Получаем сохраненный запрос или перенаправляем на /profile
-                            var savedRequest = (org.springframework.security.web.savedrequest.SavedRequest) request.getSession()
-                                    .getAttribute("SPRING_SECURITY_SAVED_REQUEST");
-                            if (savedRequest != null) {
-                                response.sendRedirect(savedRequest.getRedirectUrl());
+                            Object savedRequest = request.getSession().getAttribute("SPRING_SECURITY_SAVED_REQUEST");
+
+                            if (savedRequest instanceof org.springframework.security.web.savedrequest.DefaultSavedRequest savedReq) {
+                                try {
+                                    response.sendRedirect(savedReq.getRedirectUrl());
+                                } catch (Exception e) {
+                                    response.sendRedirect("/"); // Если ошибка - редирект на главную
+                                }
                             } else {
                                 response.sendRedirect("/profile");
                             }
                         })
                         .permitAll()
                 )
+
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/")

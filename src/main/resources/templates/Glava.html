@@ -211,20 +211,24 @@
 
   // Здесь можно делать fetch POST на /delete_comment
   document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.deleteBtn').forEach(function(button) {
-      button.addEventListener('click', function() {
-        let commentId = this.getAttribute('data-comment-id');
-        fetch('/delete_comment', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ comment_id: commentId })
-        }).then((resp) => {
-          // например, перезагрузить страницу
+  document.querySelectorAll('.deleteBtn').forEach(function(button) {
+    button.addEventListener('click', function() {
+      let commentId = this.getAttribute('data-comment-id');
+      fetch('/delete_comment', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ comment_id: commentId })
+      }).then(response => response.json()).then(data => {
+        if (data.result === "ok") {
           window.location.reload();
-        });
+        } else {
+          alert("Ошибка при удалении комментария");
+        }
       });
     });
   });
+});
+
 
   // Открытие/закрытие блока оглавления
   const toggleButton = document.getElementById('toggleButton');

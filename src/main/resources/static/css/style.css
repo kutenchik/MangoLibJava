@@ -974,7 +974,7 @@ color : #2f3640;
   display: inline-block;
 }
 .genres-list{
-  max-height: 450px;
+  max-height: 200px;
 }
 #closeButtonm{
   background: none;
